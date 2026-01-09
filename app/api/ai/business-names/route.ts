@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateBusinessNameSuggestions } from "@/lib/ai/local-ai";
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
