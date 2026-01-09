@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseISO, addMinutes, isBefore, startOfDay } from "date-fns";
 import { getAvailabilityForDate, generateTimeSlots } from "@/lib/availability";
+import { detectConflictWithAlternatives, formatAlternativeSlots } from "@/lib/ai/conflict-detection";
+
+export const dynamic = 'force-dynamic';
 
 const bookingSchema = z.object({
   businessId: z.string(),
@@ -81,8 +84,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check for conflicts
-    const conflictingBookings = await prisma.booking.findMany({
+    // Check for conflicts with intelligent alternatives
+    const existingBookings = await prisma.booking.findMany({
       where: {
         businessId: validatedData.businessId,
         startTime: {
@@ -92,22 +95,32 @@ export async function POST(request: Request) {
         status: {
           not: "CANCELLED",
         },
-        OR: [
-          {
-            startTime: {
-              lt: endTime,
-            },
-            endTime: {
-              gt: startTime,
-            },
-          },
-        ],
+      },
+      select: {
+        startTime: true,
+        endTime: true,
       },
     });
 
-    if (conflictingBookings.length > 0) {
+    const conflictResult = detectConflictWithAlternatives(
+      { startTime, endTime },
+      service.duration,
+      existingBookings.map(b => ({ startTime: b.startTime, endTime: b.endTime })),
+      dayHours
+    );
+
+    if (conflictResult.hasConflict) {
+      // Return conflict with alternative suggestions
+      const alternatives = conflictResult.alternativeSlots
+        ? formatAlternativeSlots(conflictResult.alternativeSlots)
+        : [];
+
       return NextResponse.json(
-        { error: "This time slot is no longer available" },
+        {
+          error: "This time slot is no longer available",
+          conflict: true,
+          alternatives: alternatives,
+        },
         { status: 400 }
       );
     }

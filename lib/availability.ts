@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { addMinutes, format, parse, setHours, setMinutes, startOfDay, isAfter, isBefore, eachDayOfInterval, isSameDay } from "date-fns";
 
-interface DayHours {
+export interface DayHours {
   open: string;
   close: string;
   isOpen: boolean;

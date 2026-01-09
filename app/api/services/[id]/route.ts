@@ -4,12 +4,20 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
+export const dynamic = 'force-dynamic';
+
 const serviceSchema = z.object({
   name: z.string().min(1, "Service name is required").optional(),
   description: z.string().optional(),
   duration: z.number().min(5).max(480).optional(),
   price: z.number().min(0).optional(),
   isActive: z.boolean().optional(),
+  bufferTimeBefore: z.number().min(0).max(60).int().optional(),
+  bufferTimeAfter: z.number().min(0).max(60).int().optional(),
+  imageUrl: z.union([z.string().url(), z.literal("")]).optional(),
+  category: z.string().max(50).optional(),
+  maxCapacity: z.number().min(1).max(100).int().optional(),
+  cancellationPolicyHours: z.number().min(0).int().optional(),
 });
 
 export async function GET(

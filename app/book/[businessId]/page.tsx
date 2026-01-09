@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, Clock, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, CheckCircle2, Loader2, AlertCircle, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Service {
@@ -21,6 +21,12 @@ interface Service {
   description?: string;
   duration: number;
   price: number;
+  imageUrl?: string;
+  category?: string;
+  maxCapacity?: number;
+  bufferTimeBefore?: number;
+  bufferTimeAfter?: number;
+  cancellationPolicyHours?: number;
 }
 
 interface Business {
@@ -53,6 +59,11 @@ export default function BookingPage() {
   const [timeSlots, setTimeSlots] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [conflictAlternatives, setConflictAlternatives] = useState<Array<{
+    display: string;
+    value: string;
+    reason: string;
+  }>>([]);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -153,6 +164,14 @@ export default function BookingPage() {
 
       if (!response.ok) {
         const data = await response.json();
+        
+        // Handle conflict with alternatives
+        if (data.conflict && data.alternatives && Array.isArray(data.alternatives)) {
+          setConflictAlternatives(data.alternatives);
+          setError(data.error || "This time slot is no longer available. Please select an alternative:");
+          return;
+        }
+        
         throw new Error(data.error || "Failed to create booking");
       }
 
@@ -160,6 +179,7 @@ export default function BookingPage() {
       router.push(`/book/${businessId}/confirmation?bookingId=${booking.id}`);
     } catch (err: any) {
       setError(err.message);
+      setConflictAlternatives([]);
     } finally {
       setSubmitting(false);
     }
@@ -305,8 +325,24 @@ export default function BookingPage() {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
+                        {service.imageUrl && (
+                          <div className="mb-3 rounded-lg overflow-hidden">
+                            <img
+                              src={service.imageUrl}
+                              alt={service.name}
+                              className="w-full h-32 object-cover"
+                            />
+                          </div>
+                        )}
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold text-lg">{service.name}</h3>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg">{service.name}</h3>
+                            {service.category && (
+                              <Badge variant="outline" className="mt-1 text-xs">
+                                {service.category}
+                              </Badge>
+                            )}
+                          </div>
                           <Badge variant="secondary" className="ml-2">
                             ${Number(service.price).toFixed(2)}
                           </Badge>
@@ -321,6 +357,12 @@ export default function BookingPage() {
                             <Clock className="h-4 w-4" />
                             <span>{service.duration} min</span>
                           </div>
+                          {service.maxCapacity && service.maxCapacity > 1 && (
+                            <div className="flex items-center gap-1">
+                              <Users className="h-4 w-4" />
+                              <span>Up to {service.maxCapacity} people</span>
+                            </div>
+                          )}
                         </div>
                       </motion.button>
                     ))}
@@ -497,6 +539,46 @@ export default function BookingPage() {
                         }
                       />
                     </div>
+
+                    {error && (
+                      <Alert variant={conflictAlternatives.length > 0 ? "default" : "destructive"} className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          <div className="space-y-3">
+                            <p>{error}</p>
+                            {conflictAlternatives.length > 0 && (
+                              <div className="space-y-2">
+                                <p className="font-medium text-sm">Suggested alternatives:</p>
+                                <div className="grid gap-2">
+                                  {conflictAlternatives.map((alt, index) => (
+                                    <Button
+                                      key={index}
+                                      type="button"
+                                      variant="outline"
+                                      className="justify-start text-left h-auto py-3"
+                                      onClick={() => {
+                                        setSelectedTime(alt.value);
+                                        setError("");
+                                        setConflictAlternatives([]);
+                                      }}
+                                    >
+                                      <div className="flex-1">
+                                        <div className="font-medium">{alt.display}</div>
+                                        {alt.reason && (
+                                          <div className="text-xs text-muted-foreground mt-1">
+                                            {alt.reason}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </Button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
 
                     <Separator className="my-6" />
 

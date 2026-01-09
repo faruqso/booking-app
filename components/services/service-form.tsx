@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -20,9 +20,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Clock, DollarSign, CheckCircle2, XCircle, Sparkles } from "lucide-react";
+import { Autocomplete, AutocompleteOption } from "@/components/ui/autocomplete";
+import { Loader2, Clock, DollarSign, CheckCircle2, XCircle, Sparkles, Wand2, Lightbulb, Image, Tag, Users, CalendarX, Timer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { 
+  getServiceSuggestions, 
+  detectCategory, 
+  getDurationSuggestion, 
+  getPriceSuggestion,
+  type ServiceCategory 
+} from "@/lib/ai/service-database";
+import { formatValidationError, getValidationTip } from "@/lib/ai/form-validation";
 
 const serviceSchema = z.object({
   name: z
@@ -39,7 +48,13 @@ const serviceSchema = z.object({
     .number()
     .min(0, "Price cannot be negative")
     .max(10000, "Price seems too high"),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean(),
+  bufferTimeBefore: z.number().min(0).max(60).int().optional(),
+  bufferTimeAfter: z.number().min(0).max(60).int().optional(),
+  imageUrl: z.union([z.string().url("Must be a valid URL"), z.literal("")]).optional(),
+  category: z.string().max(50, "Category must be less than 50 characters").optional(),
+  maxCapacity: z.number().min(1).max(100).int().optional(),
+  cancellationPolicyHours: z.number().min(0).int().optional(),
 });
 
 type ServiceFormValues = z.infer<typeof serviceSchema>;
@@ -51,6 +66,12 @@ interface Service {
   duration: number;
   price: number;
   isActive: boolean;
+  bufferTimeBefore?: number;
+  bufferTimeAfter?: number;
+  imageUrl?: string;
+  category?: string;
+  maxCapacity?: number;
+  cancellationPolicyHours?: number;
 }
 
 interface ServiceFormProps {
@@ -63,6 +84,11 @@ interface ServiceFormProps {
 export function ServiceForm({ service, onSuccess, onCancel, hideActions = false }: ServiceFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [autocompleteOptions, setAutocompleteOptions] = useState<AutocompleteOption[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [detectedCategory, setDetectedCategory] = useState<ServiceCategory | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [generatingDescription, setGeneratingDescription] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const form = useForm<ServiceFormValues>({
@@ -73,6 +99,12 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
       duration: service?.duration || 30,
       price: typeof service?.price === 'number' ? service.price : (service?.price ? Number(service.price) : 0),
       isActive: service?.isActive ?? true,
+      bufferTimeBefore: service?.bufferTimeBefore ?? 0,
+      bufferTimeAfter: service?.bufferTimeAfter ?? 0,
+      imageUrl: service?.imageUrl || "",
+      category: service?.category || "",
+      maxCapacity: service?.maxCapacity ?? 1,
+      cancellationPolicyHours: service?.cancellationPolicyHours,
     },
   });
 
@@ -85,6 +117,12 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
         duration: service.duration || 30,
         price: typeof service.price === 'number' ? service.price : Number(service.price) || 0,
         isActive: service.isActive ?? true,
+        bufferTimeBefore: service.bufferTimeBefore ?? 0,
+        bufferTimeAfter: service.bufferTimeAfter ?? 0,
+        imageUrl: service.imageUrl || "",
+        category: service.category || "",
+        maxCapacity: service.maxCapacity ?? 1,
+        cancellationPolicyHours: service.cancellationPolicyHours,
       });
     } else {
       form.reset({
@@ -93,6 +131,12 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
         duration: 30,
         price: 0,
         isActive: true,
+        bufferTimeBefore: 0,
+        bufferTimeAfter: 0,
+        imageUrl: "",
+        category: "",
+        maxCapacity: 1,
+        cancellationPolicyHours: undefined,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,10 +172,17 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
         : "/api/services";
       const method = service?.id ? "PUT" : "POST";
 
+      // Clean up data: convert empty strings to undefined for optional fields
+      const cleanedData = {
+        ...data,
+        imageUrl: data.imageUrl === "" ? undefined : data.imageUrl,
+        category: data.category === "" ? undefined : data.category,
+      };
+
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(cleanedData),
       });
 
       if (!response.ok) {
@@ -165,8 +216,142 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
   };
 
   const watchedValues = form.watch();
-  const hasPreview = watchedValues.name && watchedValues.name.length > 0;
-  const isFormValid = form.formState.isValid && watchedValues.name.length > 0;
+  const serviceName = watchedValues.name || "";
+  const hasPreview = serviceName && serviceName.length > 0;
+  const isFormValid = form.formState.isValid && serviceName.length > 0;
+
+  // Fetch autocomplete suggestions
+  useEffect(() => {
+    if (serviceName.length >= 2) {
+      setLoadingSuggestions(true);
+      const suggestions = getServiceSuggestions(serviceName, 10);
+      setAutocompleteOptions(
+        suggestions.map(s => ({
+          value: s.name,
+          label: s.name,
+          description: `${s.category} • ${s.typicalDuration} min • $${s.priceRange.typical}`,
+          metadata: {
+            category: s.category,
+            typicalDuration: s.typicalDuration,
+            priceRange: s.priceRange,
+            tags: s.tags,
+          },
+        }))
+      );
+      setLoadingSuggestions(false);
+    } else {
+      setAutocompleteOptions([]);
+    }
+  }, [serviceName]);
+
+  // Detect category when service name changes
+  useEffect(() => {
+    if (serviceName.length >= 2) {
+      const category = detectCategory(serviceName);
+      setDetectedCategory(category);
+    } else {
+      setDetectedCategory(null);
+    }
+  }, [serviceName]);
+
+  // Handle service selection from autocomplete
+  const handleServiceSelect = (option: AutocompleteOption) => {
+    const metadata = option.metadata as any;
+    if (metadata) {
+      // Auto-fill duration and price
+      if (metadata.typicalDuration) {
+        form.setValue("duration", metadata.typicalDuration);
+      }
+      if (metadata.priceRange?.typical) {
+        form.setValue("price", metadata.priceRange.typical);
+      }
+      
+      // Show success toast
+      toast({
+        title: "Service selected",
+        description: `Auto-filled duration and price for ${metadata.category || "this service"}`,
+      });
+      
+      setShowSuggestions(true);
+    }
+  };
+
+  // Get duration and price suggestions for current service name
+  const durationSuggestion = useMemo(() => {
+    if (serviceName.length >= 2) {
+      return getDurationSuggestion(serviceName, detectedCategory || undefined);
+    }
+    return null;
+  }, [serviceName, detectedCategory]);
+
+  const priceSuggestion = useMemo(() => {
+    if (serviceName.length >= 2) {
+      return getPriceSuggestion(serviceName, detectedCategory || undefined);
+    }
+    return null;
+  }, [serviceName, detectedCategory]);
+
+  // Generate service description using AI
+  const handleGenerateDescription = async () => {
+    if (!serviceName || serviceName.length < 2) {
+      toast({
+        title: "Service name required",
+        description: "Please enter a service name first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeneratingDescription(true);
+    try {
+      const response = await fetch("/api/ai/generate-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          serviceName,
+          category: detectedCategory || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate description");
+      }
+
+      const data = await response.json();
+      form.setValue("description", data.description);
+      
+      toast({
+        title: data.fallback ? "Template description added" : "Description generated",
+        description: data.fallback 
+          ? "Added a template description. Install Ollama for AI-powered descriptions."
+          : "AI-generated description added. Feel free to edit it.",
+      });
+    } catch (error: any) {
+      console.error("Failed to generate description:", error);
+      // Fallback to template-based description
+      const templateDescription = `Professional ${serviceName} service. Experience quality and expertise tailored to your needs.${detectedCategory ? ` Our ${detectedCategory.toLowerCase()} services are designed to meet your expectations.` : ""}`;
+      form.setValue("description", templateDescription);
+      toast({
+        title: "Description added",
+        description: "Added a template description. You can customize it.",
+      });
+    } finally {
+      setGeneratingDescription(false);
+    }
+  };
+
+  // Enhanced validation messages
+  const getFieldError = (fieldName: keyof ServiceFormValues) => {
+    const error = form.formState.errors[fieldName];
+    if (!error) return null;
+
+    const fieldValue = watchedValues[fieldName];
+    return formatValidationError(
+      fieldName,
+      { type: error.type || "validation", message: error.message },
+      fieldValue
+    );
+  };
   
   // Ensure price is always a number for preview
   // Prioritize service prop when editing (more reliable), then fall back to form value
@@ -200,49 +385,121 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
                 <Separator className="mb-4" />
               </div>
 
-              {/* Service Name */}
+              {/* Service Name with Autocomplete */}
               <FormField
                 control={form.control}
                 name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base">Service Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g., Haircut, Consultation, Massage"
-                        className="h-11"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription className="text-sm">
-                      Choose a clear, descriptive name for your service
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const nameError = getFieldError("name");
+                  const nameTip = getValidationTip("name", field.value);
+                  
+                  return (
+                    <FormItem>
+                      <FormLabel className="text-base flex items-center gap-2">
+                        Service Name
+                        {detectedCategory && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Wand2 className="h-3 w-3 mr-1" />
+                            {detectedCategory}
+                          </Badge>
+                        )}
+                      </FormLabel>
+                      <FormControl>
+                        <Autocomplete
+                          value={field.value}
+                          onChange={field.onChange}
+                          onSelect={handleServiceSelect}
+                          options={autocompleteOptions}
+                          placeholder="Start typing... (e.g., Haircut, Consultation, Massage)"
+                          className="w-full"
+                          inputClassName="h-11"
+                          emptyMessage="Keep typing to see suggestions"
+                          disabled={loading}
+                        />
+                      </FormControl>
+                      {nameTip && (
+                        <FormDescription className="text-sm flex items-start gap-2 text-muted-foreground">
+                          <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <span>{nameTip}</span>
+                        </FormDescription>
+                      )}
+                      {!nameTip && (
+                        <FormDescription className="text-sm">
+                          Choose a clear, descriptive name. Suggestions will appear as you type.
+                        </FormDescription>
+                      )}
+                      {nameError && (
+                        <p className="text-sm font-medium text-destructive">{nameError.message}</p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               {/* Description */}
               <FormField
                 control={form.control}
                 name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base">Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Describe what customers can expect from this service..."
-                        rows={4}
-                        className="resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription className="text-sm">
-                      Optional: Help customers understand what this service includes
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const descriptionError = getFieldError("description");
+                  const descriptionTip = getValidationTip("description", field.value);
+                  const canGenerate = serviceName && serviceName.length >= 2;
+                  
+                  return (
+                    <FormItem>
+                      <FormLabel className="text-base flex items-center justify-between">
+                        <span>Description</span>
+                        {canGenerate && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleGenerateDescription}
+                            disabled={generatingDescription || loading}
+                            className="h-8 text-xs"
+                          >
+                            {generatingDescription ? (
+                              <>
+                                <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Wand2 className="h-3 w-3 mr-1.5" />
+                                Generate with AI
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Describe what customers can expect from this service..."
+                          rows={4}
+                          className="resize-none"
+                          {...field}
+                          disabled={generatingDescription}
+                        />
+                      </FormControl>
+                      {descriptionTip && (
+                        <FormDescription className="text-sm flex items-start gap-2 text-muted-foreground">
+                          <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <span>{descriptionTip}</span>
+                        </FormDescription>
+                      )}
+                      {!descriptionTip && (
+                        <FormDescription className="text-sm">
+                          Optional: Help customers understand what this service includes. Click &quot;Generate with AI&quot; to auto-create a description.
+                        </FormDescription>
+                      )}
+                      {descriptionError && (
+                        <p className="text-sm font-medium text-destructive">{descriptionError.message}</p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
             </div>
 
@@ -257,23 +514,179 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
                 <FormField
                   control={form.control}
                   name="duration"
+                  render={({ field }) => {
+                    const durationError = getFieldError("duration");
+                    const durationTip = getValidationTip("duration", field.value);
+                    const shouldShowSuggestion = durationSuggestion && (field.value === undefined || field.value === null || field.value === 0);
+                    
+                    return (
+                      <FormItem>
+                        <FormLabel className="text-base">Duration (minutes)</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              min={5}
+                              max={480}
+                              step={5}
+                              placeholder={durationSuggestion ? `${durationSuggestion} (suggested)` : "30"}
+                              className="h-11"
+                              {...field}
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                            {shouldShowSuggestion && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="absolute right-1 top-1 h-9 text-xs"
+                                onClick={() => {
+                                  field.onChange(durationSuggestion);
+                                  toast({
+                                    title: "Duration auto-filled",
+                                    description: `Based on similar services in ${detectedCategory || "this category"}`,
+                                  });
+                                }}
+                              >
+                                <Wand2 className="h-3 w-3 mr-1" />
+                                Use {durationSuggestion} min
+                              </Button>
+                            )}
+                          </div>
+                        </FormControl>
+                        {durationTip && (
+                          <FormDescription className="text-sm flex items-start gap-2 text-muted-foreground">
+                            <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            <span>{durationTip}</span>
+                          </FormDescription>
+                        )}
+                        {!durationTip && durationSuggestion && field.value && (
+                          <FormDescription className="text-sm">
+                            Typical duration for similar services: {durationSuggestion} minutes
+                          </FormDescription>
+                        )}
+                        {!durationTip && !durationSuggestion && (
+                          <FormDescription className="text-sm">
+                            How long does this service take?
+                          </FormDescription>
+                        )}
+                        {durationError && (
+                          <p className="text-sm font-medium text-destructive">{durationError.message}</p>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => {
+                    const priceError = getFieldError("price");
+                    const priceTip = getValidationTip("price", field.value);
+                    const shouldShowSuggestion = priceSuggestion && (field.value === undefined || field.value === null || field.value === 0);
+                    
+                    return (
+                      <FormItem>
+                        <FormLabel className="text-base">Price</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              placeholder={priceSuggestion ? `${priceSuggestion.typical.toFixed(2)} (suggested)` : "0.00"}
+                              className="pl-8 h-11"
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                const numValue = value === "" ? 0 : parseFloat(value);
+                                field.onChange(isNaN(numValue) ? 0 : numValue);
+                              }}
+                            />
+                            {shouldShowSuggestion && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="absolute right-1 top-1 h-9 text-xs"
+                                onClick={() => {
+                                  field.onChange(priceSuggestion.typical);
+                                  toast({
+                                    title: "Price auto-filled",
+                                    description: `Based on market rates: $${priceSuggestion.min}-$${priceSuggestion.max}`,
+                                  });
+                                }}
+                              >
+                                <Wand2 className="h-3 w-3 mr-1" />
+                                Use ${priceSuggestion.typical}
+                              </Button>
+                            )}
+                          </div>
+                        </FormControl>
+                        {priceTip && (
+                          <FormDescription className="text-sm flex items-start gap-2 text-muted-foreground">
+                            <Lightbulb className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            <span>{priceTip}</span>
+                          </FormDescription>
+                        )}
+                        {!priceTip && priceSuggestion && field.value && (
+                          <FormDescription className="text-sm">
+                            Market range: ${priceSuggestion.min}-${priceSuggestion.max} (typical: ${priceSuggestion.typical})
+                          </FormDescription>
+                        )}
+                        {!priceTip && !priceSuggestion && (
+                          <FormDescription className="text-sm">
+                            Set the price for this service
+                          </FormDescription>
+                        )}
+                        {priceError && (
+                          <p className="text-sm font-medium text-destructive">{priceError.message}</p>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Buffer Time Section */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground mb-4">Buffer Time</h3>
+                <Separator className="mb-4" />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="bufferTimeBefore"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-base">Duration (minutes)</FormLabel>
+                      <FormLabel className="text-base flex items-center gap-2">
+                        <Timer className="h-4 w-4" />
+                        Buffer Time Before (minutes)
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
-                          min={5}
-                          max={480}
+                          min={0}
+                          max={60}
                           step={5}
-                          placeholder="30"
+                          placeholder="0"
                           className="h-11"
                           {...field}
+                          value={field.value ?? ""}
                           onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                         />
                       </FormControl>
                       <FormDescription className="text-sm">
-                        How long does this service take?
+                        Time needed before service starts (setup/preparation)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -282,31 +695,147 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
 
                 <FormField
                   control={form.control}
-                  name="price"
+                  name="bufferTimeAfter"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-base">Price</FormLabel>
+                      <FormLabel className="text-base flex items-center gap-2">
+                        <Timer className="h-4 w-4" />
+                        Buffer Time After (minutes)
+                      </FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
-                          <Input
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            placeholder="0.00"
-                            className="pl-8 h-11"
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              const numValue = value === "" ? 0 : parseFloat(value);
-                              field.onChange(isNaN(numValue) ? 0 : numValue);
-                            }}
-                          />
-                        </div>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={60}
+                          step={5}
+                          placeholder="0"
+                          className="h-11"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        />
                       </FormControl>
                       <FormDescription className="text-sm">
-                        Set the price for this service
+                        Time needed after service ends (cleanup)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Additional Details Section */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground mb-4">Additional Details</h3>
+                <Separator className="mb-4" />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="imageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base flex items-center gap-2">
+                        <Image className="h-4 w-4" />
+                        Image URL
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="url"
+                          placeholder="https://example.com/image.jpg"
+                          className="h-11"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-sm">
+                        Optional: Add an image URL to showcase your service
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base flex items-center gap-2">
+                        <Tag className="h-4 w-4" />
+                        Category
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., Hair Services, Massage, Consultation"
+                          className="h-11"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-sm">
+                        Optional: Group similar services together
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="maxCapacity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Max Capacity
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={100}
+                          placeholder="1"
+                          className="h-11"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-sm">
+                        Maximum number of people for this service (default: 1)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="cancellationPolicyHours"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base flex items-center gap-2">
+                        <CalendarX className="h-4 w-4" />
+                        Cancellation Policy (hours)
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="Leave empty for no cancellation"
+                          className="h-11"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(value === "" ? undefined : (parseInt(value) || undefined));
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-sm">
+                        Hours before booking that cancellation is allowed (leave empty to disable cancellation)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

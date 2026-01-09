@@ -109,6 +109,14 @@ model Service {
   price       Decimal  @db.Decimal(10, 2)
   isActive    Boolean  @default(true)
   
+  // Additional fields
+  bufferTimeBefore Int? @default(0) // Minutes needed before service (setup time)
+  bufferTimeAfter  Int? @default(0) // Minutes needed after service (cleanup time)
+  imageUrl         String? // Service image URL
+  category         String? // Service category (e.g., "Hair Services", "Massage", "Consultation")
+  maxCapacity      Int? @default(1) // Maximum number of people for group services
+  cancellationPolicyHours Int? // Hours before booking that cancellation is allowed (null = no cancellation)
+  
   business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   bookings    Booking[]
   
@@ -116,6 +124,7 @@ model Service {
   updatedAt   DateTime @updatedAt
 
   @@index([businessId])
+  @@index([category])
 }
 
 model Booking {

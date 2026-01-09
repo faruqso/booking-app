@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
+export const dynamic = 'force-dynamic';
+
 const brandingSchema = z.object({
   businessName: z.string().min(1, "Business name is required"),
   primaryColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format"),

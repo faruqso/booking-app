@@ -26,6 +26,7 @@ import { Calendar, CheckCircle2, XCircle, Clock, Loader2, User, CalendarDays, Do
 import { useToast } from "@/hooks/use-toast";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
 import { Modal, ModalFooter, ModalButton } from "@/components/ui/modal";
+import { detectSentiment, getSentimentColor, getSentimentLabel } from "@/lib/ai/sentiment-detection";
 
 interface Booking {
   id: string;
@@ -283,10 +284,28 @@ export default function BookingsPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {format(
-                            new Date(booking.startTime),
-                            "MMM d, yyyy 'at' h:mm a"
-                          )}
+                          <div className="space-y-1">
+                            <div>
+                              {format(
+                                new Date(booking.startTime),
+                                "MMM d, yyyy 'at' h:mm a"
+                              )}
+                            </div>
+                            {booking.notes && (() => {
+                              const sentiment = detectSentiment(booking.notes);
+                              if (sentiment.type !== "neutral") {
+                                return (
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-xs ${getSentimentColor(sentiment.type)} text-white border-0`}
+                                  >
+                                    {getSentimentLabel(sentiment.type)}
+                                  </Badge>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge
@@ -469,6 +488,41 @@ export default function BookingsPage() {
                   </p>
                 </div>
               </div>
+
+              {selectedBooking.notes && (
+                <>
+                  <div className="h-px bg-border" />
+                  <div className="flex items-start gap-3">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 mt-0.5 flex-shrink-0">
+                      <AlertCircle className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Notes
+                        </p>
+                        {(() => {
+                          const sentiment = detectSentiment(selectedBooking.notes);
+                          if (sentiment.type !== "neutral") {
+                            return (
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${getSentimentColor(sentiment.type)} text-white border-0`}
+                              >
+                                {getSentimentLabel(sentiment.type)}
+                              </Badge>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                      <p className="text-sm text-foreground whitespace-pre-wrap">
+                        {selectedBooking.notes}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

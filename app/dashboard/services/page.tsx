@@ -367,7 +367,7 @@ export default function ServicesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete "{deletingService?.name}". This
+              This will permanently delete &quot;{deletingService?.name}&quot;. This
               action cannot be undone and will remove all associated booking
               history.
             </AlertDialogDescription>

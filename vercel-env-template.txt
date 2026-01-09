@@ -1,0 +1,25 @@
+# Vercel Environment Variables Template
+# Copy these to your Vercel project settings (Settings > Environment Variables)
+
+# Database
+DATABASE_URL=postgresql://neondb_owner:npg_Fuibog9p4hty@ep-frosty-cherry-a4skop9z-pooler.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require
+
+# NextAuth Configuration
+NEXTAUTH_URL=https://your-project-name.vercel.app
+NEXTAUTH_SECRET=z7UA0Y8vHNhGwjKyJX4Sn/xa0R3YZC59HFYCwF+aIBw=
+NEXT_PUBLIC_APP_URL=https://your-project-name.vercel.app
+
+# Resend Email (get from https://resend.com/api-keys)
+RESEND_API_KEY=your-resend-api-key-here
+RESEND_FROM_EMAIL=onboarding@resend.dev
+
+# Node Environment
+NODE_ENV=production
+
+# Instructions:
+# 1. Generate NEXTAUTH_SECRET: openssl rand -base64 32
+# 2. Replace 'your-project-name' with your actual Vercel project URL
+# 3. Get RESEND_API_KEY from https://resend.com/api-keys
+# 4. Add all variables to Vercel: Project Settings > Environment Variables
+# 5. Apply to: Production, Preview, and Development environments
+

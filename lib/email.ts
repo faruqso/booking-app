@@ -2,6 +2,8 @@ import { Resend } from "resend";
 import { BookingConfirmationEmail } from "@/components/emails/booking-confirmation";
 import { BookingReminderEmail } from "@/components/emails/booking-reminder";
 import { BookingCancellationEmail } from "@/components/emails/booking-cancellation";
+import { generateEmailSubject } from "@/lib/ai/template-engine";
+import { format } from "date-fns";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -32,10 +34,17 @@ export async function sendBookingConfirmationEmail(
   }
 
   try {
+    // Generate optimized subject line using template engine
+    const subject = generateEmailSubject("bookingConfirmation", {
+      businessName: booking.businessName,
+      serviceName: booking.serviceName,
+      date: format(booking.startTime, "MMMM d"),
+    });
+
     await resend.emails.send({
       from: getFromEmail(),
       to,
-      subject: `Booking Confirmed - ${booking.businessName}`,
+      subject,
       react: BookingConfirmationEmail({
         customerName: booking.customerName,
         serviceName: booking.serviceName,
@@ -69,10 +78,15 @@ export async function sendBookingCancellationEmail(
   }
 
   try {
+    // Generate optimized subject line
+    const subject = generateEmailSubject("bookingCancellation", {
+      businessName: booking.businessName,
+    });
+
     await resend.emails.send({
       from: getFromEmail(),
       to,
-      subject: `Booking Cancelled - ${booking.businessName}`,
+      subject,
       react: BookingCancellationEmail({
         customerName: booking.customerName,
         serviceName: booking.serviceName,
@@ -105,10 +119,17 @@ export async function sendBookingReminderEmail(
   }
 
   try {
+    // Generate optimized subject line
+    const subject = generateEmailSubject("bookingReminder", {
+      businessName: booking.businessName,
+      serviceName: booking.serviceName,
+      date: format(booking.startTime, "MMMM d"),
+    });
+
     await resend.emails.send({
       from: getFromEmail(),
       to,
-      subject: `Reminder: Your booking with ${booking.businessName}`,
+      subject,
       react: BookingReminderEmail({
         customerName: booking.customerName,
         serviceName: booking.serviceName,
