@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, Users, Sparkles, ArrowRight, CheckCircle2 } from "lucide-react";
-import { motion } from "framer-motion";
 
 export default function Home() {
   return (
@@ -12,12 +11,7 @@ export default function Home() {
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-16 md:py-24">
         <div className="max-w-4xl mx-auto text-center space-y-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="space-y-4"
-          >
+          <div className="space-y-4">
             <div className="flex justify-center mb-6">
               <div className="h-16 w-16 rounded-xl bg-primary flex items-center justify-center">
                 <Calendar className="h-8 w-8 text-primary-foreground" />
@@ -29,14 +23,9 @@ export default function Home() {
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Self-serve booking platform for businesses. Accept bookings, manage your schedule, and grow your business—all without developer intervention.
             </p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-          >
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button asChild size="lg" className="h-12 px-8 text-base">
               <Link href="/auth/signup">
                 Get Started
@@ -48,16 +37,11 @@ export default function Home() {
                 Sign In
               </Link>
             </Button>
-          </motion.div>
+          </div>
         </div>
 
         {/* Features Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className="max-w-6xl mx-auto mt-24"
-        >
+        <div className="max-w-6xl mx-auto mt-24">
           <div className="grid md:grid-cols-3 gap-6">
             <Card className="border-2 hover:shadow-lg transition-all">
               <CardHeader>
@@ -95,15 +79,10 @@ export default function Home() {
               </CardHeader>
             </Card>
           </div>
-        </motion.div>
+        </div>
 
         {/* CTA Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
-          className="max-w-2xl mx-auto mt-24"
-        >
+        <div className="max-w-2xl mx-auto mt-24">
           <Card className="border-2 bg-primary/5">
             <CardHeader className="text-center">
               <CardTitle className="text-2xl">Ready to get started?</CardTitle>
@@ -120,7 +99,7 @@ export default function Home() {
               </Button>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
