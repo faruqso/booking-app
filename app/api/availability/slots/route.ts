@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getAvailabilityForDate, generateTimeSlots } from "@/lib/availability";
 import { parseISO, startOfDay } from "date-fns";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
