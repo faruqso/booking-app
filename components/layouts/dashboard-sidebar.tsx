@@ -11,6 +11,7 @@ import {
   Clock,
   LogOut,
   User,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +30,7 @@ const navigation = [
   { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
   { name: "Services", href: "/dashboard/services", icon: Settings },
   { name: "Availability", href: "/dashboard/availability", icon: Clock },
+  { name: "Branding", href: "/dashboard/branding", icon: Sparkles },
 ];
 
 export function DashboardSidebar() {
