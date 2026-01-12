@@ -15,6 +15,7 @@ import {
   SlidersHorizontal,
   Users,
   UserCog,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +34,7 @@ const navigation = [
   { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
   { name: "Customers", href: "/dashboard/customers", icon: Users },
   { name: "Services", href: "/dashboard/services", icon: Settings },
+  { name: "Locations", href: "/dashboard/locations", icon: MapPin },
   { name: "Availability", href: "/dashboard/availability", icon: Clock },
   { name: "Staff", href: "/dashboard/staff", icon: UserCog, ownerOnly: true },
   { name: "Branding", href: "/dashboard/branding", icon: Sparkles },
