@@ -106,6 +106,7 @@ model Business {
   services     Service[]
   bookings     Booking[]
   customers    Customer[]
+  locations    Location[]
   availability Availability?
 
   createdAt DateTime @default(now())
@@ -114,9 +115,32 @@ model Business {
   @@index([subdomain])
 }
 
+model Location {
+  id          String  @id @default(cuid())
+  businessId  String
+  name        String
+  address     String?
+  phone       String?
+  email       String?
+  timezone    String? // Override business timezone if needed
+  isActive    Boolean @default(true)
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  services Service[]
+  bookings Booking[]
+  availability AvailabilityLocation?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([isActive])
+}
+
 model Service {
   id          String  @id @default(cuid())
   businessId  String
+  locationId  String? // Phase 2: Optional location (null = available at all locations)
   name        String
   description String?
   duration    Int // Duration in minutes
@@ -132,12 +156,14 @@ model Service {
   cancellationPolicyHours Int? // Hours before booking that cancellation is allowed (null = no cancellation)
 
   business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  location Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
   bookings Booking[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([businessId])
+  @@index([locationId])
   @@index([category])
 }
 
@@ -164,6 +190,7 @@ model Customer {
 model Booking {
   id            String  @id @default(cuid())
   businessId    String
+  locationId    String? // Phase 2: Optional location
   serviceId     String
   customerId    String? // Phase 2: Link to Customer model
   customerName  String  // Keep for backward compatibility
@@ -176,6 +203,7 @@ model Booking {
   notes     String?
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  location Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
   service  Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
@@ -183,6 +211,7 @@ model Booking {
   updatedAt DateTime @updatedAt
 
   @@index([businessId])
+  @@index([locationId])
   @@index([serviceId])
   @@index([startTime])
   @@index([customerEmail])
@@ -201,6 +230,23 @@ model Availability {
   sunday     Json?
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AvailabilityLocation {
+  id         String @id @default(cuid())
+  locationId String @unique
+  monday     Json? // Store hours as JSON: { open: "09:00", close: "17:00", isOpen: true }
+  tuesday    Json?
+  wednesday  Json?
+  thursday   Json?
+  friday     Json?
+  saturday   Json?
+  sunday     Json?
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
