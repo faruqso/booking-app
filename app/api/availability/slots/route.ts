@@ -21,6 +21,18 @@ export async function GET(request: Request) {
 
     const date = startOfDay(parseISO(dateStr));
 
+    // Get business with booking rules
+    const business = await prisma.business.findUnique({
+      where: { id: businessId },
+      select: {
+        bookingBufferMinutes: true,
+      },
+    });
+
+    if (!business) {
+      return NextResponse.json({ error: "Business not found" }, { status: 404 });
+    }
+
     // Get availability
     const availability = await prisma.availability.findUnique({
       where: { businessId },
@@ -66,7 +78,7 @@ export async function GET(request: Request) {
       },
     });
 
-    // Generate time slots
+    // Generate time slots with buffer time
     const slots = generateTimeSlots(
       date,
       dayHours,
@@ -74,7 +86,8 @@ export async function GET(request: Request) {
       bookings.map((b) => ({
         startTime: b.startTime,
         endTime: b.endTime,
-      }))
+      })),
+      business.bookingBufferMinutes || 0
     );
 
     return NextResponse.json({

@@ -10,6 +10,14 @@ const brandingSchema = z.object({
   businessName: z.string().min(1, "Business name is required"),
   primaryColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format"),
   logoUrl: z.string().optional(),
+  // Phase 2 Enhanced Branding
+  secondaryColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format").optional(),
+  accentColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format").optional(),
+  backgroundColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format").optional(),
+  textColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format").optional(),
+  fontFamily: z.string().optional(),
+  faviconUrl: z.string().optional(),
+  subdomain: z.string().min(3, "Subdomain must be at least 3 characters").max(63, "Subdomain too long").regex(/^[a-z0-9-]+$/, "Subdomain can only contain lowercase letters, numbers, and hyphens").optional(),
 });
 
 export async function PUT(request: Request) {
@@ -29,14 +37,58 @@ export async function PUT(request: Request) {
     const updateData: {
       businessName: string;
       primaryColor: string;
-      logoUrl?: string;
+      logoUrl?: string | null;
+      secondaryColor?: string | null;
+      accentColor?: string | null;
+      backgroundColor?: string | null;
+      textColor?: string | null;
+      fontFamily?: string | null;
+      faviconUrl?: string | null;
+      subdomain?: string | null;
     } = {
       businessName: validatedData.businessName,
       primaryColor: validatedData.primaryColor,
     };
 
-    if (validatedData.logoUrl) {
-      updateData.logoUrl = validatedData.logoUrl;
+    // Handle optional fields - set to null if empty string, otherwise use value
+    if (validatedData.logoUrl !== undefined) {
+      updateData.logoUrl = validatedData.logoUrl || null;
+    }
+    if (validatedData.secondaryColor !== undefined) {
+      updateData.secondaryColor = validatedData.secondaryColor || null;
+    }
+    if (validatedData.accentColor !== undefined) {
+      updateData.accentColor = validatedData.accentColor || null;
+    }
+    if (validatedData.backgroundColor !== undefined) {
+      updateData.backgroundColor = validatedData.backgroundColor || null;
+    }
+    if (validatedData.textColor !== undefined) {
+      updateData.textColor = validatedData.textColor || null;
+    }
+    if (validatedData.fontFamily !== undefined) {
+      updateData.fontFamily = validatedData.fontFamily || null;
+    }
+    if (validatedData.faviconUrl !== undefined) {
+      updateData.faviconUrl = validatedData.faviconUrl || null;
+    }
+    if (validatedData.subdomain) {
+      // Check if subdomain is already taken by another business
+      const existingBusiness = await prisma.business.findFirst({
+        where: {
+          subdomain: validatedData.subdomain,
+          id: { not: session.user.businessId },
+        },
+      });
+
+      if (existingBusiness) {
+        return NextResponse.json(
+          { error: "This subdomain is already taken. Please choose another." },
+          { status: 400 }
+        );
+      }
+
+      updateData.subdomain = validatedData.subdomain.toLowerCase();
     }
 
     const business = await prisma.business.update({
@@ -78,6 +130,13 @@ export async function GET(request: Request) {
         businessName: true,
         primaryColor: true,
         logoUrl: true,
+        secondaryColor: true,
+        accentColor: true,
+        backgroundColor: true,
+        textColor: true,
+        fontFamily: true,
+        faviconUrl: true,
+        subdomain: true,
       },
     });
 

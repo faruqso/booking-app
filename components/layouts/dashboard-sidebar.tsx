@@ -12,6 +12,9 @@ import {
   LogOut,
   User,
   Sparkles,
+  SlidersHorizontal,
+  Users,
+  UserCog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,9 +31,12 @@ import { Separator } from "@/components/ui/separator";
 const navigation = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
+  { name: "Customers", href: "/dashboard/customers", icon: Users },
   { name: "Services", href: "/dashboard/services", icon: Settings },
   { name: "Availability", href: "/dashboard/availability", icon: Clock },
+  { name: "Staff", href: "/dashboard/staff", icon: UserCog, ownerOnly: true },
   { name: "Branding", href: "/dashboard/branding", icon: Sparkles },
+  { name: "Settings", href: "/dashboard/settings", icon: SlidersHorizontal },
 ];
 
 export function DashboardSidebar() {
@@ -51,27 +57,35 @@ export function DashboardSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-4">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href || 
-            (item.href !== "/dashboard" && pathname?.startsWith(item.href));
-          const Icon = item.icon;
-          
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              )}
-            >
-              <Icon className="h-5 w-5" />
-              {item.name}
-            </Link>
-          );
-        })}
+        {navigation
+          .filter((item) => {
+            // Filter out owner-only items for non-owners
+            if (item.ownerOnly && session?.user?.role !== "BUSINESS_OWNER") {
+              return false;
+            }
+            return true;
+          })
+          .map((item) => {
+            const isActive = pathname === item.href || 
+              (item.href !== "/dashboard" && pathname?.startsWith(item.href));
+            const Icon = item.icon;
+            
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                <Icon className="h-5 w-5" />
+                {item.name}
+              </Link>
+            );
+          })}
       </nav>
 
       {/* User Section */}

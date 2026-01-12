@@ -70,30 +70,44 @@ model VerificationToken {
 }
 
 model Business {
-  id        String   @id @default(cuid())
-  name      String
-  email     String
-  phone     String?
-  address   String?
-  timezone  String   @default("UTC")
-  
+  id       String  @id @default(cuid())
+  name     String
+  email    String
+  phone    String?
+  address  String?
+  timezone String  @default("UTC")
+
   // Branding (Phase 1 - Basic)
-  logoUrl   String?
-  primaryColor String @default("#3b82f6") // Default blue
+  logoUrl      String?
+  primaryColor String  @default("#3b82f6") // Default blue
   businessName String // Display name for branding
-  
-  // Domain (Phase 2+)
-  subdomain String?  @unique
-  
+
+  // Enhanced Branding (Phase 2)
+  secondaryColor  String? // Secondary brand color
+  accentColor     String? // Accent color
+  backgroundColor String? // Custom background color
+  textColor       String? // Custom text color
+  fontFamily      String? // Custom font from Google Fonts
+  faviconUrl      String? // Favicon URL
+
+  // Domain (Phase 2)
+  subdomain String? @unique
+
+  // Booking Rules (Phase 2)
+  minimumAdvanceBookingHours Int @default(2) // Minimum hours in advance for booking
+  cancellationPolicyHours    Int @default(24) // Hours before booking that cancellation is allowed
+  bookingBufferMinutes       Int @default(15) // Buffer time between bookings in minutes
+
   // Settings
-  settings  Json?    // Store flexible settings as JSON
-  
+  settings Json? // Store flexible settings as JSON
+
   // Relations
-  users     User[]
-  services  Service[]
-  bookings  Booking[]
+  users        User[]
+  services     Service[]
+  bookings     Booking[]
+  customers    Customer[]
   availability Availability?
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -101,72 +115,95 @@ model Business {
 }
 
 model Service {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   businessId  String
   name        String
   description String?
-  duration    Int      // Duration in minutes
-  price       Decimal  @db.Decimal(10, 2)
-  isActive    Boolean  @default(true)
-  
+  duration    Int // Duration in minutes
+  price       Decimal @db.Decimal(10, 2)
+  isActive    Boolean @default(true)
+
   // Additional fields
-  bufferTimeBefore Int? @default(0) // Minutes needed before service (setup time)
-  bufferTimeAfter  Int? @default(0) // Minutes needed after service (cleanup time)
-  imageUrl         String? // Service image URL
-  category         String? // Service category (e.g., "Hair Services", "Massage", "Consultation")
-  maxCapacity      Int? @default(1) // Maximum number of people for group services
+  bufferTimeBefore        Int?    @default(0) // Minutes needed before service (setup time)
+  bufferTimeAfter         Int?    @default(0) // Minutes needed after service (cleanup time)
+  imageUrl                String? // Service image URL
+  category                String? // Service category (e.g., "Hair Services", "Massage", "Consultation")
+  maxCapacity             Int?    @default(1) // Maximum number of people for group services
   cancellationPolicyHours Int? // Hours before booking that cancellation is allowed (null = no cancellation)
-  
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  bookings    Booking[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([businessId])
   @@index([category])
 }
 
+model Customer {
+  id            String   @id @default(cuid())
+  businessId    String
+  email         String
+  name          String
+  phone         String?
+  notes         String?  @db.Text // Internal notes about the customer
+  
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessId, email]) // Unique email per business
+  @@index([businessId])
+  @@index([email])
+}
+
 model Booking {
-  id            String        @id @default(cuid())
+  id            String  @id @default(cuid())
   businessId    String
   serviceId     String
-  customerName  String
+  customerId    String? // Phase 2: Link to Customer model
+  customerName  String  // Keep for backward compatibility
   customerEmail String
   customerPhone String?
-  
-  startTime     DateTime
-  endTime       DateTime
-  status        BookingStatus @default(PENDING)
-  notes         String?
-  
-  business      Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  service       Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+
+  startTime DateTime
+  endTime   DateTime
+  status    BookingStatus @default(PENDING)
+  notes     String?
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  service  Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([businessId])
   @@index([serviceId])
   @@index([startTime])
   @@index([customerEmail])
+  @@index([customerId])
 }
 
 model Availability {
-  id          String   @id @default(cuid())
-  businessId  String   @unique
-  monday      Json?    // Store hours as JSON: { open: "09:00", close: "17:00", isOpen: true }
-  tuesday     Json?
-  wednesday   Json?
-  thursday    Json?
-  friday      Json?
-  saturday    Json?
-  sunday      Json?
-  
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String @id @default(cuid())
+  businessId String @unique
+  monday     Json? // Store hours as JSON: { open: "09:00", close: "17:00", isOpen: true }
+  tuesday    Json?
+  wednesday  Json?
+  thursday   Json?
+  friday     Json?
+  saturday   Json?
+  sunday     Json?
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum UserRole {
@@ -182,4 +219,3 @@ enum BookingStatus {
   COMPLETED
   NO_SHOW
 }
-

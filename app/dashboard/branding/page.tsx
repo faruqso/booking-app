@@ -19,15 +19,25 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Palette, Building2, Upload, X, Sparkles, AlertCircle } from "lucide-react";
+import { Loader2, Palette, Building2, Upload, X, Sparkles, AlertCircle, Type, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { POPULAR_GOOGLE_FONTS } from "@/lib/google-fonts";
 
 const brandingSchema = z.object({
   businessName: z.string().min(2, "Business name must be at least 2 characters"),
   primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format"),
   logoUrl: z.string().optional(),
+  // Phase 2 Enhanced Branding
+  secondaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format").optional().or(z.literal("")),
+  accentColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format").optional().or(z.literal("")),
+  backgroundColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format").optional().or(z.literal("")),
+  textColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format").optional().or(z.literal("")),
+  fontFamily: z.string().optional(),
+  faviconUrl: z.string().optional(),
+  subdomain: z.string().min(3, "Subdomain must be at least 3 characters").max(63, "Subdomain too long").regex(/^[a-z0-9-]+$/, "Subdomain can only contain lowercase letters, numbers, and hyphens").optional().or(z.literal("")),
 });
 
 type BrandingFormValues = z.infer<typeof brandingSchema>;
@@ -40,6 +50,8 @@ export default function BrandingPage() {
   const [saving, setSaving] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
+  const [faviconFile, setFaviconFile] = useState<File | null>(null);
 
   const form = useForm<BrandingFormValues>({
     resolver: zodResolver(brandingSchema),
@@ -47,6 +59,13 @@ export default function BrandingPage() {
       businessName: "",
       primaryColor: "#3b82f6",
       logoUrl: "",
+      secondaryColor: "",
+      accentColor: "",
+      backgroundColor: "",
+      textColor: "",
+      fontFamily: "",
+      faviconUrl: "",
+      subdomain: "",
     },
   });
 
@@ -67,9 +86,19 @@ export default function BrandingPage() {
           businessName: data.businessName || "",
           primaryColor: data.primaryColor || "#3b82f6",
           logoUrl: data.logoUrl || "",
+          secondaryColor: data.secondaryColor || "",
+          accentColor: data.accentColor || "",
+          backgroundColor: data.backgroundColor || "",
+          textColor: data.textColor || "",
+          fontFamily: data.fontFamily || "",
+          faviconUrl: data.faviconUrl || "",
+          subdomain: data.subdomain || "",
         });
         if (data.logoUrl) {
           setLogoPreview(data.logoUrl);
+        }
+        if (data.faviconUrl) {
+          setFaviconPreview(data.faviconUrl);
         }
       }
     } catch (error) {
@@ -124,6 +153,48 @@ export default function BrandingPage() {
     setLogoFile(null);
     setLogoPreview(null);
     form.setValue("logoUrl", "");
+  };
+
+  const handleFaviconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type (favicon should be .ico, .png, or .svg)
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file (ICO, PNG, or SVG)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 500KB for favicon)
+    if (file.size > 500 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Favicon must be smaller than 500KB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFaviconFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      setFaviconPreview(result);
+      form.setValue("faviconUrl", result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeFavicon = () => {
+    setFaviconFile(null);
+    setFaviconPreview(null);
+    form.setValue("faviconUrl", "");
   };
 
   const onSubmit = async (data: BrandingFormValues) => {
@@ -343,6 +414,323 @@ export default function BrandingPage() {
                   </FormItem>
                 )}
               />
+
+              <Separator />
+
+              {/* Enhanced Branding Section - Phase 2 */}
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Enhanced Branding (Optional)</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Customize your complete brand identity with additional colors, fonts, and settings.
+                  </p>
+                </div>
+
+                {/* Color Palette */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Secondary Color */}
+                  <FormField
+                    control={form.control}
+                    name="secondaryColor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base flex items-center gap-2">
+                          <Palette className="h-4 w-4" />
+                          Secondary Color
+                        </FormLabel>
+                        <FormDescription className="text-sm">
+                          Secondary brand color for accents
+                        </FormDescription>
+                        <FormControl>
+                          <div className="flex items-center gap-4">
+                            <Input
+                              type="color"
+                              className="h-12 w-24 cursor-pointer"
+                              value={field.value || "#64748b"}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
+                            <Input
+                              type="text"
+                              placeholder="#64748b"
+                              className="h-11 text-base font-mono max-w-[120px]"
+                              value={field.value || ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value.startsWith("#") || value === "") {
+                                  field.onChange(value);
+                                } else {
+                                  field.onChange(`#${value}`);
+                                }
+                              }}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Accent Color */}
+                  <FormField
+                    control={form.control}
+                    name="accentColor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base flex items-center gap-2">
+                          <Palette className="h-4 w-4" />
+                          Accent Color
+                        </FormLabel>
+                        <FormDescription className="text-sm">
+                          Accent color for highlights
+                        </FormDescription>
+                        <FormControl>
+                          <div className="flex items-center gap-4">
+                            <Input
+                              type="color"
+                              className="h-12 w-24 cursor-pointer"
+                              value={field.value || "#f59e0b"}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
+                            <Input
+                              type="text"
+                              placeholder="#f59e0b"
+                              className="h-11 text-base font-mono max-w-[120px]"
+                              value={field.value || ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value.startsWith("#") || value === "") {
+                                  field.onChange(value);
+                                } else {
+                                  field.onChange(`#${value}`);
+                                }
+                              }}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Background Color */}
+                  <FormField
+                    control={form.control}
+                    name="backgroundColor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base flex items-center gap-2">
+                          <Palette className="h-4 w-4" />
+                          Background Color
+                        </FormLabel>
+                        <FormDescription className="text-sm">
+                          Custom background color
+                        </FormDescription>
+                        <FormControl>
+                          <div className="flex items-center gap-4">
+                            <Input
+                              type="color"
+                              className="h-12 w-24 cursor-pointer"
+                              value={field.value || "#ffffff"}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
+                            <Input
+                              type="text"
+                              placeholder="#ffffff"
+                              className="h-11 text-base font-mono max-w-[120px]"
+                              value={field.value || ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value.startsWith("#") || value === "") {
+                                  field.onChange(value);
+                                } else {
+                                  field.onChange(`#${value}`);
+                                }
+                              }}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Text Color */}
+                  <FormField
+                    control={form.control}
+                    name="textColor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base flex items-center gap-2">
+                          <Palette className="h-4 w-4" />
+                          Text Color
+                        </FormLabel>
+                        <FormDescription className="text-sm">
+                          Primary text color
+                        </FormDescription>
+                        <FormControl>
+                          <div className="flex items-center gap-4">
+                            <Input
+                              type="color"
+                              className="h-12 w-24 cursor-pointer"
+                              value={field.value || "#171717"}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
+                            <Input
+                              type="text"
+                              placeholder="#171717"
+                              className="h-11 text-base font-mono max-w-[120px]"
+                              value={field.value || ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value.startsWith("#") || value === "") {
+                                  field.onChange(value);
+                                } else {
+                                  field.onChange(`#${value}`);
+                                }
+                              }}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <Separator />
+
+                {/* Font Family */}
+                <FormField
+                  control={form.control}
+                  name="fontFamily"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base flex items-center gap-2">
+                        <Type className="h-4 w-4" />
+                        Custom Font
+                      </FormLabel>
+                      <FormDescription className="text-sm">
+                        Choose a font from Google Fonts to customize your booking page typography
+                      </FormDescription>
+                      <Select 
+                        onValueChange={(value) => field.onChange(value === "default" ? "" : value)} 
+                        value={field.value || "default"}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-11">
+                            <SelectValue placeholder="Select a font (optional)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="default">Default (Inter)</SelectItem>
+                          {POPULAR_GOOGLE_FONTS.map((font) => (
+                            <SelectItem key={font.family} value={font.family}>
+                              {font.name} ({font.category})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Separator />
+
+                {/* Favicon Upload */}
+                <FormField
+                  control={form.control}
+                  name="faviconUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base flex items-center gap-2">
+                        <Upload className="h-4 w-4" />
+                        Favicon
+                      </FormLabel>
+                      <FormDescription className="text-sm">
+                        Upload a favicon (appears in browser tab). Recommended: 32x32px ICO, PNG, or SVG (max 500KB)
+                      </FormDescription>
+                      <FormControl>
+                        <div className="space-y-4">
+                          {faviconPreview ? (
+                            <div className="relative inline-block">
+                              <div className="relative w-16 h-16 border-2 border-dashed border-muted rounded-lg overflow-hidden bg-muted/50 flex items-center justify-center">
+                                <img
+                                  src={faviconPreview}
+                                  alt="Favicon preview"
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                                onClick={removeFavicon}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-muted rounded-lg cursor-pointer bg-muted/50 hover:bg-muted/70 transition-colors">
+                              <div className="flex flex-col items-center justify-center pt-3 pb-4">
+                                <Upload className="h-6 w-6 text-muted-foreground mb-2" />
+                                <p className="text-xs text-muted-foreground">
+                                  <span className="font-semibold">Click to upload</span> favicon
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  ICO, PNG, SVG up to 500KB
+                                </p>
+                              </div>
+                              <input
+                                type="file"
+                                className="hidden"
+                                accept="image/x-icon,image/png,image/svg+xml"
+                                onChange={handleFaviconChange}
+                              />
+                            </label>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Separator />
+
+                {/* Subdomain */}
+                <FormField
+                  control={form.control}
+                  name="subdomain"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base flex items-center gap-2">
+                        <Globe className="h-4 w-4" />
+                        Custom Subdomain
+                      </FormLabel>
+                      <FormDescription className="text-sm">
+                        Choose a custom subdomain for your booking page (e.g., yourbusiness.yourapp.com)
+                      </FormDescription>
+                      <FormControl>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            placeholder="yourbusiness"
+                            className="h-11 text-base font-mono"
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+                              field.onChange(value);
+                            }}
+                          />
+                          <span className="text-muted-foreground">.yourapp.com</span>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <Separator />
 

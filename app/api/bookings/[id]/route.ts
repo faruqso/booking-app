@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { subHours, isBefore } from "date-fns";
 
 export const dynamic = 'force-dynamic';
 
@@ -87,6 +88,30 @@ export async function PATCH(
         { error: "Booking not found" },
         { status: 404 }
       );
+    }
+
+    // Phase 2: Enforce cancellation policy
+    if (status === "CANCELLED" && existingBooking.status !== "CANCELLED") {
+      const cancellationPolicyHours = existingBooking.business.cancellationPolicyHours || 0;
+      
+      if (cancellationPolicyHours > 0) {
+        const cancellationDeadline = subHours(existingBooking.startTime, cancellationPolicyHours);
+        const now = new Date();
+        
+        if (isBefore(now, cancellationDeadline)) {
+          // Still within cancellation window, allow cancellation
+        } else {
+          // Past cancellation deadline
+          return NextResponse.json(
+            { 
+              error: `This booking cannot be cancelled. Cancellation must be made at least ${cancellationPolicyHours} hours before the appointment. Please contact the business directly.`,
+              cancellationDeadline: cancellationDeadline.toISOString(),
+            },
+            { status: 400 }
+          );
+        }
+      }
+      // If cancellationPolicyHours is 0, cancellation is always allowed
     }
 
     const booking = await prisma.booking.update({

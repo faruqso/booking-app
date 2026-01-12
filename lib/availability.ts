@@ -1,4 +1,3 @@
-import { Prisma } from "@prisma/client";
 import { addMinutes, format, parse, setHours, setMinutes, startOfDay, isAfter, isBefore, eachDayOfInterval, isSameDay } from "date-fns";
 
 export interface DayHours {
@@ -7,7 +6,7 @@ export interface DayHours {
   isOpen: boolean;
 }
 
-type AvailabilityJson = Prisma.JsonValue;
+type AvailabilityJson = unknown;
 
 export function getDayHours(dayData: AvailabilityJson | null): DayHours | null {
   if (!dayData || typeof dayData !== "object") return null;
@@ -36,7 +35,8 @@ export function generateTimeSlots(
   date: Date,
   dayHours: DayHours | null,
   duration: number,
-  existingBookings: { startTime: Date; endTime: Date }[] = []
+  existingBookings: { startTime: Date; endTime: Date }[] = [],
+  bufferMinutes: number = 0 // Phase 2: Buffer time between bookings
 ): Date[] {
   if (!dayHours || !dayHours.isOpen) {
     return [];
@@ -60,13 +60,19 @@ export function generateTimeSlots(
 
   while (isBefore(addMinutes(currentSlot, duration), slotEnd) || 
          formatTime(addMinutes(currentSlot, duration)) === formatTime(slotEnd)) {
-    // Check if this slot conflicts with existing bookings
+    // Check if this slot conflicts with existing bookings (including buffer time)
     const slotEndTime = addMinutes(currentSlot, duration);
+    const slotStartWithBuffer = bufferMinutes > 0 ? addMinutes(currentSlot, -bufferMinutes) : currentSlot;
+    const slotEndWithBuffer = bufferMinutes > 0 ? addMinutes(slotEndTime, bufferMinutes) : slotEndTime;
+    
     const hasConflict = existingBookings.some((booking) => {
+      // Check for overlap (including buffer zones)
       return (
-        (isAfter(currentSlot, booking.startTime) && isBefore(currentSlot, booking.endTime)) ||
-        (isAfter(slotEndTime, booking.startTime) && isBefore(slotEndTime, booking.endTime)) ||
-        (isBefore(currentSlot, booking.startTime) && isAfter(slotEndTime, booking.endTime))
+        (isAfter(slotStartWithBuffer, booking.startTime) && isBefore(slotStartWithBuffer, booking.endTime)) ||
+        (isAfter(slotEndWithBuffer, booking.startTime) && isBefore(slotEndWithBuffer, booking.endTime)) ||
+        (isBefore(slotStartWithBuffer, booking.startTime) && isAfter(slotEndWithBuffer, booking.endTime)) ||
+        (isAfter(booking.startTime, slotStartWithBuffer) && isBefore(booking.startTime, slotEndWithBuffer)) ||
+        (isAfter(booking.endTime, slotStartWithBuffer) && isBefore(booking.endTime, slotEndWithBuffer))
       );
     });
 

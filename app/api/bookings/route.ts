@@ -57,11 +57,22 @@ export async function POST(request: Request) {
     // Parse and validate date/time
     const startTime = parseISO(validatedData.startTime);
     const endTime = addMinutes(startTime, service.duration);
+    const now = new Date();
 
     // Check if time is in the past
-    if (isBefore(startTime, new Date())) {
+    if (isBefore(startTime, now)) {
       return NextResponse.json(
         { error: "Cannot book in the past" },
+        { status: 400 }
+      );
+    }
+
+    // Check minimum advance booking time
+    const minimumAdvanceTime = addMinutes(now, business.minimumAdvanceBookingHours * 60);
+    if (isBefore(startTime, minimumAdvanceTime)) {
+      const hours = business.minimumAdvanceBookingHours;
+      return NextResponse.json(
+        { error: `Bookings must be made at least ${hours} hour${hours !== 1 ? 's' : ''} in advance` },
         { status: 400 }
       );
     }
