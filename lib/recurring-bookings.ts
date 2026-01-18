@@ -117,12 +117,13 @@ export function generateOccurrenceDates(
     dates.push(new Date(candidateDate));
 
     // Move to next date for next iteration
-    currentDate = getNextDate(candidateDate, recurring);
+    const nextDate = getNextDate(candidateDate, recurring);
     
-    if (!currentDate) {
+    if (!nextDate) {
       break;
     }
 
+    currentDate = nextDate;
     iterationCount++;
   }
 
