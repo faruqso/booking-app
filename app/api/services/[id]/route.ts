@@ -11,6 +11,7 @@ const serviceSchema = z.object({
   description: z.string().optional(),
   duration: z.number().min(5).max(480).optional(),
   price: z.number().min(0).optional(),
+  locationId: z.string().optional().nullable(), // Phase 2: Optional location
   isActive: z.boolean().optional(),
   bufferTimeBefore: z.number().min(0).max(60).int().optional(),
   bufferTimeAfter: z.number().min(0).max(60).int().optional(),
@@ -38,6 +39,14 @@ export async function GET(
       where: {
         id: params.id,
         businessId: session.user.businessId,
+      },
+      include: {
+        location: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
@@ -90,9 +99,37 @@ export async function PUT(
       );
     }
 
+    // Validate location belongs to business if provided
+    if (validatedData.locationId !== undefined && validatedData.locationId !== null) {
+      const location = await prisma.location.findFirst({
+        where: {
+          id: validatedData.locationId,
+          businessId: session.user.businessId,
+        },
+      });
+
+      if (!location) {
+        return NextResponse.json(
+          { error: "Location not found or does not belong to your business" },
+          { status: 400 }
+        );
+      }
+    }
+
     const service = await prisma.service.update({
       where: { id: params.id },
-      data: validatedData,
+      data: {
+        ...validatedData,
+        locationId: validatedData.locationId === undefined ? undefined : (validatedData.locationId || null),
+      },
+      include: {
+        location: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
     });
 
     return NextResponse.json(service);

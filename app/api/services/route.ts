@@ -11,6 +11,7 @@ const serviceSchema = z.object({
   description: z.string().optional(),
   duration: z.number().min(5, "Duration must be at least 5 minutes").max(480, "Duration cannot exceed 8 hours"),
   price: z.number().min(0, "Price cannot be negative"),
+  locationId: z.string().optional().nullable(), // Phase 2: Optional location (null = all locations)
   isActive: z.boolean().optional().default(true),
   bufferTimeBefore: z.number().min(0).max(60).int().optional().default(0),
   bufferTimeAfter: z.number().min(0).max(60).int().optional().default(0),
@@ -33,6 +34,14 @@ export async function GET(request: Request) {
 
     const services = await prisma.service.findMany({
       where: { businessId: session.user.businessId },
+      include: {
+        location: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
     });
 
@@ -60,11 +69,37 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validatedData = serviceSchema.parse(body);
 
+    // Validate location belongs to business if provided
+    if (validatedData.locationId) {
+      const location = await prisma.location.findFirst({
+        where: {
+          id: validatedData.locationId,
+          businessId: session.user.businessId,
+        },
+      });
+
+      if (!location) {
+        return NextResponse.json(
+          { error: "Location not found or does not belong to your business" },
+          { status: 400 }
+        );
+      }
+    }
+
     const service = await prisma.service.create({
       data: {
         ...validatedData,
         businessId: session.user.businessId,
         price: validatedData.price,
+        locationId: validatedData.locationId || null,
+      },
+      include: {
+        location: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
