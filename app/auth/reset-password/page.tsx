@@ -17,6 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Lock, CheckCircle2, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -180,15 +181,14 @@ function ResetPasswordContent() {
                     <FormItem>
                       <FormLabel>New Password</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                          <Input
-                            type="password"
-                            placeholder="Minimum 8 characters"
-                            className="pl-9 h-11"
-                            {...field}
-                          />
-                        </div>
+                        <PasswordInput
+                          placeholder="Minimum 8 characters"
+                          className="h-11"
+                          showIcon={true}
+                          iconPosition="left"
+                          IconComponent={Lock}
+                          {...field}
+                        />
                       </FormControl>
                       <FormDescription className="text-xs">
                         Must be at least 8 characters
@@ -205,15 +205,14 @@ function ResetPasswordContent() {
                     <FormItem>
                       <FormLabel>Confirm Password</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                          <Input
-                            type="password"
-                            placeholder="Confirm your password"
-                            className="pl-9 h-11"
-                            {...field}
-                          />
-                        </div>
+                        <PasswordInput
+                          placeholder="Confirm your password"
+                          className="h-11"
+                          showIcon={true}
+                          iconPosition="left"
+                          IconComponent={Lock}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

@@ -16,6 +16,7 @@ import {
   Users,
   UserCog,
   MapPin,
+  Repeat,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +33,7 @@ import { Separator } from "@/components/ui/separator";
 const navigation = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
+  { name: "Recurring", href: "/dashboard/recurring-bookings", icon: Repeat },
   { name: "Customers", href: "/dashboard/customers", icon: Users },
   { name: "Services", href: "/dashboard/services", icon: Settings },
   { name: "Locations", href: "/dashboard/locations", icon: MapPin },

@@ -102,12 +102,13 @@ model Business {
   settings Json? // Store flexible settings as JSON
 
   // Relations
-  users        User[]
-  services     Service[]
-  bookings     Booking[]
-  customers    Customer[]
-  locations    Location[]
-  availability Availability?
+  users             User[]
+  services          Service[]
+  bookings          Booking[]
+  recurringBookings RecurringBooking[]
+  customers         Customer[]
+  locations         Location[]
+  availability      Availability?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -116,22 +117,23 @@ model Business {
 }
 
 model Location {
-  id          String  @id @default(cuid())
-  businessId  String
-  name        String
-  address     String?
-  phone       String?
-  email       String?
-  timezone    String? // Override business timezone if needed
-  isActive    Boolean @default(true)
+  id         String  @id @default(cuid())
+  businessId String
+  name       String
+  address    String?
+  phone      String?
+  email      String?
+  timezone   String? // Override business timezone if needed
+  isActive   Boolean @default(true)
 
-  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  services Service[]
-  bookings Booking[]
+  business     Business              @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  services     Service[]
+  bookings     Booking[]
   availability AvailabilityLocation?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  RecurringBooking RecurringBooking[]
 
   @@index([businessId])
   @@index([isActive])
@@ -155,9 +157,10 @@ model Service {
   maxCapacity             Int?    @default(1) // Maximum number of people for group services
   cancellationPolicyHours Int? // Hours before booking that cancellation is allowed (null = no cancellation)
 
-  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  location Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  bookings Booking[]
+  business          Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  location          Location?          @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  bookings          Booking[]
+  recurringBookings RecurringBooking[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -168,16 +171,17 @@ model Service {
 }
 
 model Customer {
-  id            String   @id @default(cuid())
-  businessId    String
-  email         String
-  name          String
-  phone         String?
-  notes         String?  @db.Text // Internal notes about the customer
-  
+  id         String  @id @default(cuid())
+  businessId String
+  email      String
+  name       String
+  phone      String?
+  notes      String? @db.Text // Internal notes about the customer
+
   // Relations
-  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  bookings Booking[]
+  business          Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  bookings          Booking[]
+  recurringBookings RecurringBooking[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -188,24 +192,26 @@ model Customer {
 }
 
 model Booking {
-  id            String  @id @default(cuid())
-  businessId    String
-  locationId    String? // Phase 2: Optional location
-  serviceId     String
-  customerId    String? // Phase 2: Link to Customer model
-  customerName  String  // Keep for backward compatibility
-  customerEmail String
-  customerPhone String?
+  id                 String  @id @default(cuid())
+  businessId         String
+  locationId         String? // Phase 2: Optional location
+  serviceId          String
+  customerId         String? // Phase 2: Link to Customer model
+  recurringBookingId String? // Phase 2: Link to RecurringBooking if generated from series
+  customerName       String // Keep for backward compatibility
+  customerEmail      String
+  customerPhone      String?
 
   startTime DateTime
   endTime   DateTime
   status    BookingStatus @default(PENDING)
   notes     String?
 
-  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  location Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  service  Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  business         Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  location         Location?         @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  service          Service           @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  customer         Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  recurringBooking RecurringBooking? @relation(fields: [recurringBookingId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -216,6 +222,7 @@ model Booking {
   @@index([startTime])
   @@index([customerEmail])
   @@index([customerId])
+  @@index([recurringBookingId])
 }
 
 model Availability {
@@ -252,6 +259,51 @@ model AvailabilityLocation {
   updatedAt DateTime @updatedAt
 }
 
+// Phase 2: Recurring Bookings
+model RecurringBooking {
+  id         String  @id @default(cuid())
+  businessId String
+  locationId String? // Optional location
+  serviceId  String
+  customerId String? // Link to Customer model
+
+  // Customer details (kept for compatibility and quick access)
+  customerName  String
+  customerEmail String
+  customerPhone String?
+
+  // Recurrence pattern
+  frequency           RecurrenceFrequency // DAILY, WEEKLY, BIWEEKLY, MONTHLY
+  dayOfWeek           Int? // 0-6 (Sunday = 0) for weekly/biweekly patterns
+  dayOfMonth          Int? // 1-31 for monthly patterns
+  startTime           String // Time of day (e.g., "14:00" or "2:00 PM")
+  startDate           DateTime // First occurrence date
+  endDate             DateTime? // Optional end date for the series
+  numberOfOccurrences Int? // Optional: total number of bookings to create
+
+  // Status and tracking
+  isActive          Boolean   @default(true)
+  lastGeneratedDate DateTime? // Last time bookings were generated
+  notes             String?   @db.Text
+
+  // Relations
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  location Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  service  Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  bookings Booking[] // Individual bookings generated from this series
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([locationId])
+  @@index([serviceId])
+  @@index([customerId])
+  @@index([isActive])
+  @@index([startDate])
+}
+
 enum UserRole {
   BUSINESS_OWNER
   STAFF
@@ -264,4 +316,11 @@ enum BookingStatus {
   CANCELLED
   COMPLETED
   NO_SHOW
+}
+
+enum RecurrenceFrequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
 }
