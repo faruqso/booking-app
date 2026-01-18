@@ -5,7 +5,13 @@ import { BookingCancellationEmail } from "@/components/emails/booking-cancellati
 import { generateEmailSubject } from "@/lib/ai/template-engine";
 import { format } from "date-fns";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization - only create Resend instance when needed (not at build time)
+const getResend = () => {
+  if (!process.env.RESEND_API_KEY) {
+    return null;
+  }
+  return new Resend(process.env.RESEND_API_KEY);
+};
 
 // Use Resend test domain for development, or custom domain for production
 const getFromEmail = () => {
@@ -28,7 +34,8 @@ export async function sendBookingConfirmationEmail(
     primaryColor?: string;
   }
 ) {
-  if (!process.env.RESEND_API_KEY) {
+  const resend = getResend();
+  if (!resend) {
     console.warn("RESEND_API_KEY not set, skipping email");
     return;
   }
@@ -72,7 +79,8 @@ export async function sendBookingCancellationEmail(
     primaryColor?: string;
   }
 ) {
-  if (!process.env.RESEND_API_KEY) {
+  const resend = getResend();
+  if (!resend) {
     console.warn("RESEND_API_KEY not set, skipping email");
     return;
   }
@@ -113,7 +121,8 @@ export async function sendBookingReminderEmail(
     primaryColor?: string;
   }
 ) {
-  if (!process.env.RESEND_API_KEY) {
+  const resend = getResend();
+  if (!resend) {
     console.warn("RESEND_API_KEY not set, skipping email");
     return;
   }

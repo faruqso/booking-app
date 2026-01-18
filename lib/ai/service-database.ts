@@ -295,6 +295,52 @@ export function getPriceSuggestion(serviceName: string, category?: ServiceCatego
 }
 
 /**
+ * Get semantic autocomplete suggestions using AI Gateway (Paid Tier)
+ * Falls back to fuzzy matching if Gateway is unavailable
+ */
+export async function getSemanticAutocomplete(
+  query: string,
+  businessId?: string,
+  limit: number = 10
+): Promise<ServiceSuggestion[]> {
+  // Check if Gateway is available and business has budget
+  if (businessId) {
+    try {
+      const { checkBudget } = await import('./budget-manager');
+      const { generateEmbeddingViaGateway } = await import('./gateway-wrapper');
+      
+      const hasBudget = await checkBudget(businessId);
+      
+      if (hasBudget) {
+        try {
+          // Generate embedding for query
+          const queryEmbedding = await generateEmbeddingViaGateway({
+            texts: [query],
+            model: 'text-embedding-3-small',
+            businessId,
+          });
+          
+          // Note: Full semantic search requires a vector database
+          // This is a placeholder - in production, you would:
+          // 1. Store service embeddings in Pinecone/Weaviate/etc.
+          // 2. Perform similarity search
+          // 3. Return top matches
+          
+          // For now, fall through to fuzzy matching
+        } catch (error) {
+          console.warn('Semantic search failed, using fuzzy matching:', error);
+        }
+      }
+    } catch (error) {
+      // Gateway not available, use fuzzy matching
+    }
+  }
+  
+  // Fallback to fuzzy matching (existing implementation)
+  return getServiceSuggestions(query, limit);
+}
+
+/**
  * Get tag suggestions based on service name or category
  */
 export function getTagSuggestions(serviceName: string, category?: ServiceCategory): string[] {

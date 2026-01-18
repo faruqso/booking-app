@@ -6,7 +6,13 @@ import { Resend } from "resend";
 
 export const dynamic = 'force-dynamic';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization - only create Resend instance when needed (not at build time)
+const getResend = () => {
+  if (!process.env.RESEND_API_KEY) {
+    return null;
+  }
+  return new Resend(process.env.RESEND_API_KEY);
+};
 
 export async function POST(request: Request) {
   try {
@@ -55,7 +61,8 @@ export async function POST(request: Request) {
     });
 
     // Send reset email
-    if (process.env.RESEND_API_KEY) {
+    const resend = getResend();
+    if (resend) {
       // Use NEXTAUTH_URL if available (more reliable), otherwise fall back to NEXT_PUBLIC_APP_URL or default
       const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001";
       const resetUrl = `${baseUrl}/auth/reset-password?token=${token}`;
