@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { addDays, addWeeks, addMonths, startOfDay, parse, format, getDay, setDate, setHours, setMinutes, isAfter, isBefore } from "date-fns";
+import { addDays, addWeeks, addMonths, startOfDay, getDay, setDate, setHours, setMinutes } from "date-fns";
 
 interface RecurringBooking {
   id: string;
@@ -46,80 +46,6 @@ function parseTimeString(timeStr: string): { hours: number; minutes: number } {
   return { hours: adjustedHours, minutes: minutes || 0 };
 }
 
-/**
- * Calculate next occurrence date based on frequency and pattern
- */
-function getNextOccurrenceDate(
-  baseDate: Date,
-  frequency: "DAILY" | "WEEKLY" | "BIWEEKLY" | "MONTHLY",
-  dayOfWeek: number | null,
-  dayOfMonth: number | null,
-  currentDate: Date
-): Date | null {
-  let candidate = new Date(baseDate);
-
-  // Set time to the recurring booking's start time
-  const { hours, minutes } = parseTimeString(
-    // We'll need to get this from the recurring booking, but for now use a default
-    // This will be handled when we actually generate dates
-  );
-
-  switch (frequency) {
-    case "DAILY":
-      // Next occurrence is tomorrow if base date is in the past
-      if (isBefore(candidate, currentDate)) {
-        candidate = addDays(currentDate, 1);
-      }
-      break;
-
-    case "WEEKLY":
-      if (dayOfWeek === null) return null;
-      // Find next occurrence of the specified day of week
-      const currentDayOfWeek = getDay(currentDate);
-      let daysToAdd = dayOfWeek - currentDayOfWeek;
-      if (daysToAdd <= 0) {
-        daysToAdd += 7; // Next week
-      }
-      candidate = addDays(currentDate, daysToAdd);
-      break;
-
-    case "BIWEEKLY":
-      if (dayOfWeek === null) return null;
-      // Find next occurrence every 2 weeks
-      const currentDay = getDay(currentDate);
-      let weeksToAdd = 0;
-      if (currentDay < dayOfWeek) {
-        weeksToAdd = 0;
-      } else if (currentDay > dayOfWeek) {
-        weeksToAdd = 1;
-      } else {
-        // Same day - check if we need to add 2 weeks
-        const diffInWeeks = Math.floor((currentDate.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24 * 7));
-        if (diffInWeeks % 2 === 0) {
-          weeksToAdd = 2;
-        } else {
-          weeksToAdd = 1;
-        }
-      }
-      candidate = addWeeks(startOfDay(currentDate), weeksToAdd);
-      break;
-
-    case "MONTHLY":
-      if (dayOfMonth === null) return null;
-      // Find next occurrence on the specified day of month
-      candidate = new Date(currentDate);
-      candidate = setDate(candidate, dayOfMonth);
-      if (candidate <= currentDate) {
-        candidate = addMonths(candidate, 1);
-      }
-      break;
-
-    default:
-      return null;
-  }
-
-  return candidate;
-}
 
 /**
  * Generate all valid occurrence dates for a recurring booking
