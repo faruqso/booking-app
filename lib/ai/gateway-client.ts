@@ -8,8 +8,9 @@
  * The client automatically detects which authentication method is available.
  */
 
-import { openai } from '@ai-sdk/openai';
-import { anthropic } from '@ai-sdk/anthropic';
+// AI Gateway SDK imports - commented out until packages are installed
+// import { openai } from '@ai-sdk/openai';
+// import { anthropic } from '@ai-sdk/anthropic';
 
 // AI Gateway base URL
 const GATEWAY_BASE_URL = 'https://gateway.ai.cloud.vercel.com';
@@ -47,26 +48,22 @@ export function getGatewayConfig() {
 
 /**
  * Configure OpenAI provider to use AI Gateway
+ * Note: This is a placeholder - AI Gateway integration needs proper SDK setup
  */
 export function getOpenAIModel(modelName: string = 'gpt-3.5-turbo') {
-  const config = getGatewayConfig();
-  
-  return openai(modelName, {
-    baseURL: config.baseURL,
-    apiKey: config.apiKey,
-  });
+  // Placeholder - requires @ai-sdk/openai package
+  // TODO: Install @ai-sdk/openai and configure properly
+  throw new Error('AI Gateway integration not yet fully implemented. Please use existing AI features.');
 }
 
 /**
  * Configure Anthropic provider to use AI Gateway
+ * Note: This is a placeholder - AI Gateway integration needs proper SDK setup
  */
 export function getAnthropicModel(modelName: string = 'claude-3-sonnet-20240229') {
-  const config = getGatewayConfig();
-  
-  return anthropic(modelName, {
-    baseURL: config.baseURL,
-    apiKey: config.apiKey,
-  });
+  // Placeholder - requires @ai-sdk/anthropic package
+  // TODO: Install @ai-sdk/anthropic and configure properly
+  throw new Error('AI Gateway integration not yet fully implemented. Please use existing AI features.');
 }
 
 /**

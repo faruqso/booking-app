@@ -254,6 +254,25 @@ npx prisma migrate dev --name init
 
 **Note**: The current `vercel-build` script only generates Prisma client. Schema changes should be pushed manually using `db:push` until migrations are initialized.
 
+## Step 6: AI Gateway Setup (Optional - Post-Funding)
+
+When you're ready to enable paid tier AI features:
+
+1. **Set up AI Gateway** (see `docs/AI_GATEWAY_SETUP.md` for detailed instructions):
+   - Create API key in Vercel dashboard → AI Gateway
+   - Configure budgets per tier (Starter: $5/mo, Professional: $20/mo, Enterprise: $100/mo)
+   - Set up provider fallbacks (OpenAI → Anthropic)
+   - Configure monitoring dashboards
+
+2. **Authentication**:
+   - **Development**: Add `AI_GATEWAY_API_KEY` to local `.env`
+   - **Production**: Run `vercel link` and `vercel env pull` for OIDC token
+
+3. **Test AI Features**:
+   - Service description generation: `/api/ai/generate-description`
+   - Semantic autocomplete: `/api/ai/semantic-autocomplete`
+   - Booking summaries: `/api/ai/booking-summary`
+
 ## Next Steps
 
 After successful deployment:
@@ -261,4 +280,5 @@ After successful deployment:
 2. Set up monitoring alerts
 3. Document any custom configurations
 4. Plan for scaling when needed
+5. (Post-funding) Set up AI Gateway for paid tier features
 

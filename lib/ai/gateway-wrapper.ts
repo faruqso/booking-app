@@ -35,7 +35,7 @@ export interface StreamTextOptions {
  * Generate text using AI Gateway
  * Automatically checks budget and routes to appropriate provider
  */
-export async function generateTextViaGateway(options: GenerateTextOptions) {
+export async function generateTextViaGateway(options: GenerateTextOptions): Promise<never> {
   const { prompt, model = 'gpt-3.5-turbo', maxTokens, temperature, businessId } = options;
 
   // Check if Gateway is configured
