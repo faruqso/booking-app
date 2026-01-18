@@ -888,9 +888,11 @@ export default function RecurringBookingsPage() {
       {/* Delete Confirmation Dialog */}
       <Modal
         open={deleteDialogOpen}
-        onClose={() => {
-          setDeleteDialogOpen(false);
-          setPendingDelete(null);
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteDialogOpen(false);
+            setPendingDelete(null);
+          }
         }}
         title="Cancel Recurring Booking"
         description="Are you sure you want to cancel this recurring booking series? This will stop generating new bookings, but existing bookings will remain."
