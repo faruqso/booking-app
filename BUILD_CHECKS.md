@@ -4,6 +4,23 @@ This document outlines the checks and processes in place to prevent production b
 
 ## Pre-Deployment Checks
 
+### 🎯 Automated Git Hooks (Husky)
+
+**Automatic checks run before you commit/push:**
+
+1. **Pre-Commit Hook** - Runs on `git commit`
+   - Lints only staged files with ESLint
+   - Auto-fixes fixable issues
+   - Blocks commit if ESLint errors exist
+
+2. **Pre-Push Hook** - Runs on `git push`
+   - Generates Prisma Client
+   - Runs full ESLint check
+   - Runs production build
+   - **Blocks push if build fails**
+
+**These hooks are automatically set up when you run `npm install`!**
+
 ### 1. Local Build Test (Before Committing)
 
 Always run a build locally before pushing:
@@ -12,7 +29,14 @@ Always run a build locally before pushing:
 npm run build
 ```
 
+Or use the automated check:
+
+```bash
+npm run prebuild-check  # Runs lint + build
+```
+
 This catches:
+
 - TypeScript errors
 - ESLint errors
 - Missing dependencies
@@ -39,6 +63,7 @@ Run `npm run prebuild-check` before pushing to catch issues early.
 ## Common Build Failure Causes
 
 ### ESLint Errors
+
 - **Unescaped quotes** in JSX: Use `&quot;` instead of `"`
 - **Missing alt props** on images
 - **React Hook dependencies** warnings
@@ -46,22 +71,26 @@ Run `npm run prebuild-check` before pushing to catch issues early.
 **Fix:** Run `npm run lint` before committing
 
 ### TypeScript Errors
+
 - Type mismatches
 - Missing type definitions
 
 **Fix:** Run `npm run build` to see TypeScript errors
 
 ### Prisma Issues
+
 - Schema not synced with database
 - Client not generated
 
-**Fix:** 
+**Fix:**
+
 ```bash
 npm run db:generate  # Generate Prisma Client
 npm run db:push      # Push schema changes (dev only)
 ```
 
 ### Missing Dependencies
+
 - Importing packages not in `package.json`
 - Missing dev dependencies
 
@@ -70,16 +99,24 @@ npm run db:push      # Push schema changes (dev only)
 ## Best Practices
 
 ### Before Committing:
-1. ✅ Run `npm run lint` - Fix all errors (warnings are OK)
-2. ✅ Run `npm run build` - Must succeed without errors
+
+1. ✅ **Automatic:** Pre-commit hook runs ESLint on staged files
+2. ✅ **Manual (optional):** Run `npm run build` if you want extra confidence
 3. ✅ Test locally with `npm run dev`
 
+### Before Pushing:
+
+1. ✅ **Automatic:** Pre-push hook runs lint + build (blocks if fails)
+2. ✅ If hooks pass, push will proceed automatically
+
 ### Before Creating PR:
+
 1. ✅ Ensure CI checks pass on your branch
 2. ✅ Review build logs in GitHub Actions
 3. ✅ Test the feature manually
 
 ### Before Merging to Main:
+
 1. ✅ All CI checks must pass
 2. ✅ Code review approved
 3. ✅ Build succeeds in PR checks
@@ -93,6 +130,7 @@ Vercel uses the `vercel-build` script from `package.json`:
 ```
 
 This ensures:
+
 - Dev dependencies are installed (needed for Prisma)
 - Prisma Client is generated
 - Production build runs

@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-push checks..."
+
+# Generate Prisma Client (required for build)
+echo "📦 Generating Prisma Client..."
+npm run db:generate
+
+# Run linting
+echo "🔧 Running ESLint..."
+npm run lint || {
+  echo "❌ ESLint failed! Please fix errors before pushing."
+  exit 1
+}
+
+# Run build (catches TypeScript and build errors)
+echo "🏗️  Running production build..."
+npm run build || {
+  echo "❌ Build failed! Please fix errors before pushing."
+  exit 1
+}
+
+echo "✅ All pre-push checks passed! Pushing to remote..."

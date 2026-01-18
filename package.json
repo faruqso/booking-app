@@ -14,7 +14,8 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "vercel-build": "npm install --include=dev && prisma generate && next build"
+    "vercel-build": "npm install --include=dev && prisma generate && next build",
+    "prepare": "husky"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -61,7 +62,18 @@
     "@types/react-dom": "^18.3.7",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.5",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "prisma": "^5.19.1",
     "typescript": "^5.9.3"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "eslint"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   }
 }
