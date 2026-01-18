@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ServiceForm } from "@/components/services/service-form";
-import { Plus, Clock, DollarSign, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Clock, DollarSign, Sparkles, Loader2, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
 
@@ -28,6 +28,8 @@ interface Service {
   description?: string;
   duration: number;
   price: number;
+  locationId?: string | null;
+  location?: { id: string; name: string } | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -316,6 +318,18 @@ export default function ServicesPage() {
                       <DollarSign className="h-4 w-4" />
                       ${Number(service.price).toFixed(2)}
                     </span>
+                    {service.location && (
+                      <span className="flex items-center gap-1.5">
+                        <MapPin className="h-4 w-4" />
+                        {service.location.name}
+                      </span>
+                    )}
+                    {!service.location && service.locationId === null && (
+                      <span className="flex items-center gap-1.5 text-xs">
+                        <MapPin className="h-4 w-4" />
+                        All Locations
+                      </span>
+                    )}
                   </div>
                 </CardContent>
               </Card>

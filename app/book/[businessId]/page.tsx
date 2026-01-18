@@ -21,6 +21,8 @@ interface Service {
   description?: string;
   duration: number;
   price: number;
+  locationId?: string | null;
+  location?: { id: string; name: string } | null;
   imageUrl?: string;
   category?: string;
   maxCapacity?: number;
@@ -108,8 +110,10 @@ export default function BookingPage() {
     if (!selectedService || !selectedDate) return;
 
     try {
+      // Phase 2: Include locationId if service is tied to a specific location
+      const locationParam = selectedService.locationId ? `&locationId=${selectedService.locationId}` : '';
       const response = await fetch(
-        `/api/availability/slots?businessId=${businessId}&serviceId=${selectedService.id}&date=${selectedDate.toISOString()}`
+        `/api/availability/slots?businessId=${businessId}&serviceId=${selectedService.id}&date=${selectedDate.toISOString()}${locationParam}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -154,6 +158,7 @@ export default function BookingPage() {
         body: JSON.stringify({
           businessId,
           serviceId: selectedService.id,
+          locationId: selectedService.locationId || null, // Phase 2: Include location
           customerName: customerData.name,
           customerEmail: customerData.email,
           customerPhone: customerData.phone,

@@ -21,7 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Autocomplete, AutocompleteOption } from "@/components/ui/autocomplete";
-import { Loader2, Clock, DollarSign, CheckCircle2, XCircle, Sparkles, Wand2, Lightbulb, Image, Tag, Users, CalendarX, Timer } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Clock, DollarSign, CheckCircle2, XCircle, Sparkles, Wand2, Lightbulb, Image, Tag, Users, CalendarX, Timer, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -48,6 +49,7 @@ const serviceSchema = z.object({
     .number()
     .min(0, "Price cannot be negative")
     .max(10000, "Price seems too high"),
+  locationId: z.string().nullable().optional(), // Phase 2: Optional location (null = all locations)
   isActive: z.boolean(),
   bufferTimeBefore: z.number().min(0).max(60).int().optional(),
   bufferTimeAfter: z.number().min(0).max(60).int().optional(),
@@ -65,6 +67,8 @@ interface Service {
   description?: string;
   duration: number;
   price: number;
+  locationId?: string | null;
+  location?: { id: string; name: string } | null;
   isActive: boolean;
   bufferTimeBefore?: number;
   bufferTimeAfter?: number;
@@ -72,6 +76,12 @@ interface Service {
   category?: string;
   maxCapacity?: number;
   cancellationPolicyHours?: number;
+}
+
+interface Location {
+  id: string;
+  name: string;
+  isActive: boolean;
 }
 
 interface ServiceFormProps {
@@ -89,6 +99,8 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
   const [detectedCategory, setDetectedCategory] = useState<ServiceCategory | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [generatingDescription, setGeneratingDescription] = useState(false);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const form = useForm<ServiceFormValues>({
@@ -98,6 +110,7 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
       description: service?.description || "",
       duration: service?.duration || 30,
       price: typeof service?.price === 'number' ? service.price : (service?.price ? Number(service.price) : 0),
+      locationId: service?.locationId ?? null,
       isActive: service?.isActive ?? true,
       bufferTimeBefore: service?.bufferTimeBefore ?? 0,
       bufferTimeAfter: service?.bufferTimeAfter ?? 0,
@@ -108,6 +121,26 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
     },
   });
 
+  // Fetch locations on mount
+  useEffect(() => {
+    fetchLocations();
+  }, []);
+
+  const fetchLocations = async () => {
+    setLoadingLocations(true);
+    try {
+      const response = await fetch("/api/locations");
+      if (response.ok) {
+        const data = await response.json();
+        setLocations(data.filter((loc: Location) => loc.isActive));
+      }
+    } catch (error) {
+      console.error("Failed to fetch locations:", error);
+    } finally {
+      setLoadingLocations(false);
+    }
+  };
+
   // Reset form when service prop changes (e.g., when opening edit modal)
   useEffect(() => {
     if (service) {
@@ -116,6 +149,7 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
         description: service.description || "",
         duration: service.duration || 30,
         price: typeof service.price === 'number' ? service.price : Number(service.price) || 0,
+        locationId: service.locationId ?? null,
         isActive: service.isActive ?? true,
         bufferTimeBefore: service.bufferTimeBefore ?? 0,
         bufferTimeAfter: service.bufferTimeAfter ?? 0,
@@ -130,6 +164,7 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
         description: "",
         duration: 30,
         price: 0,
+        locationId: null,
         isActive: true,
         bufferTimeBefore: 0,
         bufferTimeAfter: 0,
@@ -652,6 +687,44 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
                     );
                   }}
                 />
+
+                {/* Phase 2: Location Selection */}
+                {locations.length > 0 && (
+                  <FormField
+                    control={form.control}
+                    name="locationId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          Location (Optional)
+                        </FormLabel>
+                        <FormControl>
+                          <Select
+                            onValueChange={(value) => field.onChange(value === "all" ? null : value)}
+                            value={field.value || "all"}
+                          >
+                            <SelectTrigger className="h-11">
+                              <SelectValue placeholder="Select location" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Locations</SelectItem>
+                              {locations.map((location) => (
+                                <SelectItem key={location.id} value={location.id}>
+                                  {location.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormDescription className="text-sm">
+                          Leave as &quot;All Locations&quot; to make this service available at all locations, or select a specific location.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
             </div>
 

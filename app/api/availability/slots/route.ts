@@ -11,6 +11,7 @@ export async function GET(request: Request) {
     const businessId = searchParams.get("businessId");
     const dateStr = searchParams.get("date");
     const serviceId = searchParams.get("serviceId");
+    const locationId = searchParams.get("locationId"); // Phase 2: Optional location filter
 
     if (!businessId || !dateStr) {
       return NextResponse.json(
@@ -42,36 +43,60 @@ export async function GET(request: Request) {
       return NextResponse.json({ slots: [] });
     }
 
-    // Get service duration
+    // Get service duration and location
     let duration = 30; // Default
+    let serviceLocationId: string | null = null;
     if (serviceId) {
       const service = await prisma.service.findUnique({
         where: { id: serviceId },
+        select: {
+          duration: true,
+          locationId: true,
+        },
       });
       if (service) {
         duration = service.duration;
+        serviceLocationId = service.locationId;
       }
     }
+
+    // Determine which location to filter by
+    // Priority: 1. Explicit locationId param, 2. Service's locationId, 3. null (all locations)
+    const filterLocationId = locationId !== null ? locationId : serviceLocationId;
 
     // Get day hours
     const dayHours = getAvailabilityForDate(availability, date);
 
-    // Get existing bookings for this date
+    // Get existing bookings for this date, filtered by location
     const startOfDate = startOfDay(date);
     const endOfDate = new Date(startOfDate);
     endOfDate.setDate(endOfDate.getDate() + 1);
 
-    const bookings = await prisma.booking.findMany({
-      where: {
-        businessId,
-        startTime: {
-          gte: startOfDate,
-          lt: endOfDate,
-        },
-        status: {
-          not: "CANCELLED",
-        },
+    const bookingWhere: any = {
+      businessId,
+      startTime: {
+        gte: startOfDate,
+        lt: endOfDate,
       },
+      status: {
+        not: "CANCELLED",
+      },
+    };
+
+    // Phase 2: Filter bookings by location
+    if (filterLocationId !== null) {
+      // Only check conflicts with bookings at this location or at all locations
+      bookingWhere.OR = [
+        { locationId: filterLocationId },
+        { locationId: null }, // All locations bookings conflict with specific location bookings
+      ];
+    } else {
+      // Service available at all locations - only check against other "all locations" bookings
+      bookingWhere.locationId = null;
+    }
+
+    const bookings = await prisma.booking.findMany({
+      where: bookingWhere,
       select: {
         startTime: true,
         endTime: true,

@@ -12,6 +12,7 @@ export const dynamic = 'force-dynamic';
 const bookingSchema = z.object({
   businessId: z.string(),
   serviceId: z.string(),
+  locationId: z.string().nullable().optional(), // Phase 2: Optional location
   customerName: z.string().min(1, "Name is required"),
   customerEmail: z.string().email("Invalid email address"),
   customerPhone: z.string().optional(),
@@ -45,6 +46,9 @@ export async function POST(request: Request) {
         businessId: validatedData.businessId,
         isActive: true,
       },
+      include: {
+        location: true,
+      },
     });
 
     if (!service) {
@@ -53,6 +57,33 @@ export async function POST(request: Request) {
         { status: 404 }
       );
     }
+
+    // Determine locationId for booking
+    // Use provided locationId, or fall back to service's locationId, or null for all locations
+    let bookingLocationId: string | null = null;
+    
+    if (validatedData.locationId !== undefined && validatedData.locationId !== null) {
+      // Validate location belongs to business
+      const location = await prisma.location.findFirst({
+        where: {
+          id: validatedData.locationId,
+          businessId: validatedData.businessId,
+          isActive: true,
+        },
+      });
+
+      if (!location) {
+        return NextResponse.json(
+          { error: "Location not found or inactive" },
+          { status: 400 }
+        );
+      }
+      bookingLocationId = validatedData.locationId;
+    } else if (service.locationId) {
+      // Service is tied to a specific location
+      bookingLocationId = service.locationId;
+    }
+    // If both are null/undefined, booking is for all locations (locationId = null)
 
     // Parse and validate date/time
     const startTime = parseISO(validatedData.startTime);
@@ -96,17 +127,32 @@ export async function POST(request: Request) {
     }
 
     // Check for conflicts with intelligent alternatives
-    const existingBookings = await prisma.booking.findMany({
-      where: {
-        businessId: validatedData.businessId,
-        startTime: {
-          gte: date,
-          lt: addMinutes(date, 24 * 60),
-        },
-        status: {
-          not: "CANCELLED",
-        },
+    // Filter by location: bookings at the same location, or at "all locations" (null)
+    const bookingWhere: any = {
+      businessId: validatedData.businessId,
+      startTime: {
+        gte: date,
+        lt: addMinutes(date, 24 * 60),
       },
+      status: {
+        not: "CANCELLED",
+      },
+    };
+
+    // Phase 2: Filter bookings by location
+    if (bookingLocationId !== null) {
+      // Only check conflicts with bookings at this location or at all locations
+      bookingWhere.OR = [
+        { locationId: bookingLocationId },
+        { locationId: null }, // All locations bookings conflict with specific location bookings
+      ];
+    } else {
+      // Booking for all locations - conflicts with all other bookings
+      bookingWhere.locationId = null; // Only check against other "all locations" bookings
+    }
+
+    const existingBookings = await prisma.booking.findMany({
+      where: bookingWhere,
       select: {
         startTime: true,
         endTime: true,
@@ -141,6 +187,7 @@ export async function POST(request: Request) {
       data: {
         businessId: validatedData.businessId,
         serviceId: validatedData.serviceId,
+        locationId: bookingLocationId, // Phase 2: Include location
         customerName: validatedData.customerName,
         customerEmail: validatedData.customerEmail,
         customerPhone: validatedData.customerPhone,
@@ -152,6 +199,12 @@ export async function POST(request: Request) {
       include: {
         service: true,
         business: true,
+        location: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
