@@ -1,3 +1,4 @@
+// @ts-ignore - No type definitions available for @paystack/paystack-sdk
 import Paystack from "@paystack/paystack-sdk";
 
 export interface PaystackConfig {
