@@ -29,7 +29,7 @@ export function getStripeClient(secretKey: string): Stripe {
     throw new Error("Stripe secret key is required");
   }
   return new Stripe(secretKey, {
-    apiVersion: "2024-11-20.acacia",
+    apiVersion: "2025-12-15.clover",
   });
 }
 
