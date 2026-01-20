@@ -17,6 +17,8 @@ import {
   UserCog,
   MapPin,
   Repeat,
+  CreditCard,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +35,7 @@ import { Separator } from "@/components/ui/separator";
 const navigation = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
+  { name: "Calendar", href: "/dashboard/calendar", icon: Calendar },
   { name: "Recurring", href: "/dashboard/recurring-bookings", icon: Repeat },
   { name: "Customers", href: "/dashboard/customers", icon: Users },
   { name: "Services", href: "/dashboard/services", icon: Settings },
@@ -40,6 +43,7 @@ const navigation = [
   { name: "Availability", href: "/dashboard/availability", icon: Clock },
   { name: "Staff", href: "/dashboard/staff", icon: UserCog, ownerOnly: true },
   { name: "Branding", href: "/dashboard/branding", icon: Sparkles },
+  { name: "Payments", href: "/dashboard/payments", icon: CreditCard, ownerOnly: true },
   { name: "Settings", href: "/dashboard/settings", icon: SlidersHorizontal },
 ];
 

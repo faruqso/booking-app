@@ -225,6 +225,60 @@ export async function POST(request: Request) {
       // Don't fail the booking creation if email fails
     }
 
+    // Send SMS confirmation if customer phone provided and SMS is enabled
+    if (validatedData.customerPhone && business.twilioAccountSid && business.twilioAuthToken && business.twilioPhoneNumber) {
+      try {
+        const { sendBookingConfirmationSMS } = await import("@/lib/sms");
+        await sendBookingConfirmationSMS(
+          {
+            accountSid: business.twilioAccountSid,
+            authToken: business.twilioAuthToken,
+            phoneNumber: business.twilioPhoneNumber,
+          },
+          {
+            customerName: booking.customerName,
+            customerPhone: validatedData.customerPhone,
+            serviceName: booking.service.name,
+            startTime: booking.startTime,
+            businessName: business.businessName,
+          }
+        );
+      } catch (smsError) {
+        console.error("Failed to send confirmation SMS:", smsError);
+        // Don't fail the booking creation if SMS fails
+      }
+    }
+
+    // Send WhatsApp notification to business (don't block on error)
+    try {
+      const { sendBookingWhatsAppNotification } = await import("@/lib/whatsapp");
+      await sendBookingWhatsAppNotification(
+        {
+          whatsappPhoneNumber: business.whatsappPhoneNumber,
+          whatsappAccessToken: business.whatsappAccessToken,
+          whatsappPhoneNumberId: business.whatsappPhoneNumberId,
+          whatsappBusinessAccountId: business.whatsappBusinessAccountId,
+          whatsappNotificationsEnabled: business.whatsappNotificationsEnabled,
+        },
+        {
+          id: booking.id,
+          customerName: booking.customerName,
+          customerEmail: booking.customerEmail,
+          customerPhone: booking.customerPhone,
+          serviceName: booking.service.name,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          status: booking.status,
+          notes: booking.notes,
+          locationName: booking.location?.name || null,
+        },
+        "new_booking"
+      );
+    } catch (whatsappError) {
+      console.error("Failed to send WhatsApp notification:", whatsappError);
+      // Don't fail the booking creation if WhatsApp fails
+    }
+
     return NextResponse.json(booking, { status: 201 });
   } catch (error: any) {
     if (error instanceof z.ZodError) {

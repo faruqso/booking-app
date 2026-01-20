@@ -41,16 +41,23 @@ function SignInContent() {
     setLoading(true);
 
     try {
+      // Normalize email: trim and lowercase (mobile keyboards often add spaces)
+      const normalizedEmail = formData.email.trim().toLowerCase();
+      const trimmedPassword = formData.password.trim();
+
       const result = await signIn("credentials", {
-        email: formData.email,
-        password: formData.password,
+        email: normalizedEmail,
+        password: trimmedPassword,
         redirect: false,
       });
 
       if (result?.error) {
+        console.error("Sign in error:", result.error);
         toast({
           title: "Error",
-          description: "Invalid email or password",
+          description: result.error === "CredentialsSignin" 
+            ? "Invalid email or password. Please check your credentials and try again."
+            : "Unable to sign in. Please try again.",
           variant: "destructive",
         });
       } else {
@@ -64,6 +71,7 @@ function SignInContent() {
         router.refresh();
       }
     } catch (err) {
+      console.error("Sign in exception:", err);
       toast({
         title: "Error",
         description: "An error occurred. Please try again.",
@@ -110,6 +118,10 @@ function SignInContent() {
                     name="email"
                     type="email"
                     autoComplete="email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck="false"
+                    inputMode="email"
                     required
                     placeholder="you@example.com"
                     className="pl-9 h-11"
@@ -125,6 +137,9 @@ function SignInContent() {
                   id="password"
                   name="password"
                   autoComplete="current-password"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
                   required
                   placeholder="Enter your password"
                   className="h-11"

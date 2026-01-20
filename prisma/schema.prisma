@@ -98,6 +98,33 @@ model Business {
   cancellationPolicyHours    Int @default(24) // Hours before booking that cancellation is allowed
   bookingBufferMinutes       Int @default(15) // Buffer time between bookings in minutes
 
+  // Payment Integration (Phase 2)
+  paymentProvider          String? // "stripe", "paystack", "flutterwave", or null for no payments
+  stripePublishableKey     String? // Stripe publishable key
+  stripeSecretKey          String? @db.Text // Stripe secret key (encrypted)
+  stripeWebhookSecret      String? @db.Text // Stripe webhook secret (encrypted)
+  paystackPublicKey        String? // Paystack public key
+  paystackSecretKey        String? @db.Text // Paystack secret key (encrypted)
+  paystackWebhookSecret    String? @db.Text // Paystack webhook secret (encrypted)
+  flutterwavePublicKey     String? // Flutterwave public key
+  flutterwaveSecretKey     String? @db.Text // Flutterwave secret key (encrypted)
+  flutterwaveWebhookSecret String? @db.Text // Flutterwave webhook secret (encrypted)
+  requirePaymentDeposit    Boolean @default(false) // Require deposit/payment at booking
+  depositPercentage        Int? // Percentage of total price required as deposit (e.g., 50 for 50%)
+
+  // SMS Notifications (Phase 2)
+  twilioAccountSid    String? @db.Text
+  twilioAuthToken     String? @db.Text
+  twilioPhoneNumber   String? // Twilio phone number
+  smsRemindersEnabled Boolean @default(false) // Enable SMS reminders
+
+  // WhatsApp Notifications (Phase 2)
+  whatsappPhoneNumber        String? // Business WhatsApp phone number (e.g., +1234567890)
+  whatsappAccessToken        String? @db.Text // WhatsApp Cloud API access token
+  whatsappPhoneNumberId      String? // WhatsApp phone number ID from Meta
+  whatsappBusinessAccountId  String? // WhatsApp Business Account ID
+  whatsappNotificationsEnabled Boolean @default(false) // Enable/disable WhatsApp notifications
+
   // Settings
   settings Json? // Store flexible settings as JSON
 
@@ -109,6 +136,7 @@ model Business {
   customers         Customer[]
   locations         Location[]
   availability      Availability?
+  payments          Payment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -207,11 +235,18 @@ model Booking {
   status    BookingStatus @default(PENDING)
   notes     String?
 
+  // Payment (Phase 2)
+  amountPaid      Decimal?      @db.Decimal(10, 2) // Amount paid (deposit or full)
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentProvider String? // "stripe", "paystack", "flutterwave"
+  paymentIntentId String? // Payment intent/transaction ID from provider
+
   business         Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
   location         Location?         @relation(fields: [locationId], references: [id], onDelete: SetNull)
   service          Service           @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   customer         Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
   recurringBooking RecurringBooking? @relation(fields: [recurringBookingId], references: [id], onDelete: Cascade)
+  payment          Payment? // One-to-one: Payment references this booking via bookingId
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -223,6 +258,7 @@ model Booking {
   @@index([customerEmail])
   @@index([customerId])
   @@index([recurringBookingId])
+  @@index([paymentStatus])
 }
 
 model Availability {
@@ -323,4 +359,52 @@ enum RecurrenceFrequency {
   WEEKLY
   BIWEEKLY
   MONTHLY
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+// Phase 2: Payment Integration
+model Payment {
+  id         String  @id @default(cuid())
+  businessId String
+  bookingId  String? @unique // Link to booking (optional for standalone payments)
+
+  // Payment details
+  amount   Decimal       @db.Decimal(10, 2)
+  currency String        @default("USD")
+  status   PaymentStatus @default(PENDING)
+  provider String // "stripe", "paystack", "flutterwave"
+
+  // Provider-specific IDs
+  providerPaymentId     String? // Payment ID from provider (e.g., Stripe charge ID, Paystack reference)
+  providerTransactionId String? // Transaction reference
+
+  // Customer info
+  customerEmail String
+  customerName  String?
+  customerPhone String?
+
+  // Metadata
+  metadata      Json? // Store additional provider-specific data
+  failureReason String? @db.Text // Reason for failure if status is FAILED
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  booking  Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([bookingId])
+  @@index([status])
+  @@index([provider])
+  @@index([providerPaymentId])
 }

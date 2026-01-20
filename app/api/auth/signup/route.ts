@@ -20,9 +20,14 @@ export async function POST(request: Request) {
     // Validate input
     const validatedData = signupSchema.parse(body);
 
-    // Check if user already exists
+    // Normalize email: trim whitespace and convert to lowercase
+    // This ensures consistency between signup and login
+    const normalizedEmail = validatedData.email.trim().toLowerCase();
+    const normalizedBusinessEmail = validatedData.businessEmail.trim().toLowerCase();
+
+    // Check if user already exists (using normalized email)
     const existingUser = await prisma.user.findUnique({
-      where: { email: validatedData.email },
+      where: { email: normalizedEmail },
     });
 
     if (existingUser) {
@@ -33,16 +38,16 @@ export async function POST(request: Request) {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(validatedData.password, 10);
+    const hashedPassword = await bcrypt.hash(validatedData.password.trim(), 10);
 
     // Create business and user in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Create business
       const business = await tx.business.create({
         data: {
-          name: validatedData.businessName,
-          email: validatedData.businessEmail,
-          businessName: validatedData.businessName,
+          name: validatedData.businessName.trim(),
+          email: normalizedBusinessEmail,
+          businessName: validatedData.businessName.trim(),
           primaryColor: "#3b82f6", // Default blue
           // Create default availability (Mon-Fri 9-5)
           availability: {
@@ -59,11 +64,11 @@ export async function POST(request: Request) {
         },
       });
 
-      // Create user
+      // Create user (using normalized email)
       const user = await tx.user.create({
         data: {
-          name: validatedData.name,
-          email: validatedData.email,
+          name: validatedData.name.trim(),
+          email: normalizedEmail,
           password: hashedPassword,
           role: "BUSINESS_OWNER",
           businessId: business.id,

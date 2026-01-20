@@ -5,8 +5,9 @@
  * Abstracts Gateway usage and maintains compatibility with existing code.
  */
 
-import { generateText, streamText, embed } from 'ai';
-import { getOpenAIModel, getAnthropicModel, isGatewayConfigured } from './gateway-client';
+// AI Gateway SDK imports - commented out until full implementation
+// import { generateText, streamText, embed } from 'ai';
+// import { getOpenAIModel, getAnthropicModel, isGatewayConfigured } from './gateway-client';
 import { checkBudget, getBusinessTierBudget } from './budget-manager';
 
 export interface GenerateTextOptions {
@@ -68,6 +69,14 @@ export async function generateEmbeddingViaGateway(options: GenerateEmbeddingOpti
     'AI Gateway embeddings integration is not yet fully implemented. ' +
     'Please use existing features or wait for full implementation.'
   );
+}
+
+/**
+ * Check if Gateway is configured
+ * Placeholder until full implementation
+ */
+function isGatewayConfigured(): boolean {
+  return false; // Gateway not yet fully implemented
 }
 
 /**

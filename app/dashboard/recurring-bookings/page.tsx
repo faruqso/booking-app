@@ -207,10 +207,12 @@ export default function RecurringBookingsPage() {
       const response = await fetch("/api/customers");
       if (response.ok) {
         const data = await response.json();
-        setCustomers(data);
+        // API returns { customers: [...], pagination: {...} }
+        setCustomers(Array.isArray(data.customers) ? data.customers : []);
       }
     } catch (error) {
       console.error("Failed to fetch customers:", error);
+      setCustomers([]); // Ensure customers is always an array
     }
   };
 
@@ -691,7 +693,7 @@ export default function RecurringBookingsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">New Customer</SelectItem>
-                  {customers.map((customer) => (
+                  {Array.isArray(customers) && customers.map((customer) => (
                     <SelectItem key={customer.id} value={customer.id}>
                       {customer.name} ({customer.email})
                     </SelectItem>

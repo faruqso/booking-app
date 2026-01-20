@@ -80,6 +80,12 @@ export async function PATCH(
       include: {
         service: true,
         business: true,
+        location: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
@@ -120,6 +126,12 @@ export async function PATCH(
       include: {
         service: true,
         business: true,
+        location: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
@@ -137,6 +149,64 @@ export async function PATCH(
         });
       } catch (emailError) {
         console.error("Failed to send cancellation email:", emailError);
+      }
+
+      // Send SMS cancellation if customer phone provided and SMS is enabled
+      if (existingBooking.customerPhone && existingBooking.business.twilioAccountSid && existingBooking.business.twilioAuthToken && existingBooking.business.twilioPhoneNumber) {
+        try {
+          const { sendBookingCancellationSMS } = await import("@/lib/sms");
+          await sendBookingCancellationSMS(
+            {
+              accountSid: existingBooking.business.twilioAccountSid,
+              authToken: existingBooking.business.twilioAuthToken,
+              phoneNumber: existingBooking.business.twilioPhoneNumber,
+            },
+            {
+              customerName: existingBooking.customerName,
+              customerPhone: existingBooking.customerPhone,
+              serviceName: existingBooking.service.name,
+              startTime: existingBooking.startTime,
+              businessName: existingBooking.business.businessName,
+            }
+          );
+        } catch (smsError) {
+          console.error("Failed to send cancellation SMS:", smsError);
+        }
+      }
+    }
+
+    // Send WhatsApp notification to business for cancellations or modifications
+    // Only notify if status changed (not initial creation)
+    if (existingBooking.status !== status) {
+      try {
+        const { sendBookingWhatsAppNotification } = await import("@/lib/whatsapp");
+        const eventType = status === "CANCELLED" ? "booking_cancelled" : "booking_modified";
+        
+        await sendBookingWhatsAppNotification(
+          {
+            whatsappPhoneNumber: booking.business.whatsappPhoneNumber,
+            whatsappAccessToken: booking.business.whatsappAccessToken,
+            whatsappPhoneNumberId: booking.business.whatsappPhoneNumberId,
+            whatsappBusinessAccountId: booking.business.whatsappBusinessAccountId,
+            whatsappNotificationsEnabled: booking.business.whatsappNotificationsEnabled,
+          },
+          {
+            id: booking.id,
+            customerName: booking.customerName,
+            customerEmail: booking.customerEmail,
+            customerPhone: booking.customerPhone,
+            serviceName: booking.service.name,
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+            status: booking.status,
+            notes: booking.notes,
+            locationName: booking.location?.name || null,
+          },
+          eventType
+        );
+      } catch (whatsappError) {
+        console.error("Failed to send WhatsApp notification:", whatsappError);
+        // Don't fail the booking update if WhatsApp fails
       }
     }
 

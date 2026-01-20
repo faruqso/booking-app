@@ -33,16 +33,11 @@ export function getGatewayConfig() {
     };
   }
   
-  if (!apiKey) {
-    throw new Error(
-      'AI_GATEWAY_API_KEY is required for development. ' +
-      'For production on Vercel, run "vercel link" and "vercel env pull" to get OIDC token.'
-    );
-  }
-  
+  // Don't throw error - return config without API key for graceful degradation
+  // Gateway functions will handle the error when actually called
   return {
     baseURL: GATEWAY_BASE_URL,
-    apiKey,
+    apiKey: apiKey || undefined,
   };
 }
 

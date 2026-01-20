@@ -15,24 +15,51 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.log("Missing credentials");
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+        // Normalize email: trim whitespace and convert to lowercase
+        const normalizedEmail = credentials.email.trim().toLowerCase();
+        const trimmedPassword = credentials.password.trim();
+
+        // Try to find user with normalized email first
+        let user = await prisma.user.findUnique({
+          where: { email: normalizedEmail },
           include: { business: true },
         });
 
-        if (!user || !user.password) {
+        // Fallback: if not found, try case-insensitive search (for existing users)
+        // This handles users created before email normalization was implemented
+        if (!user) {
+          user = await prisma.user.findFirst({
+            where: {
+              email: {
+                equals: credentials.email.trim(),
+                mode: 'insensitive',
+              },
+            },
+            include: { business: true },
+          });
+        }
+
+        if (!user) {
+          console.log("User not found:", normalizedEmail);
+          return null;
+        }
+
+        if (!user.password) {
+          console.log("User has no password set");
           return null;
         }
 
         const isPasswordValid = await bcrypt.compare(
-          credentials.password,
+          trimmedPassword,
           user.password
         );
 
         if (!isPasswordValid) {
+          console.log("Invalid password for user:", normalizedEmail);
           return null;
         }
 
@@ -48,6 +75,18 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
   },
   callbacks: {
     async jwt({ token, user }) {

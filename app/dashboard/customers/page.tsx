@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,6 +67,7 @@ export default function CustomersPage() {
   const { toast } = useToast();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasFetched, setHasFetched] = useState(false);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -94,45 +95,61 @@ export default function CustomersPage() {
     },
   });
 
+  const fetchCustomers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const url = search
+        ? `/api/customers?search=${encodeURIComponent(search)}`
+        : "/api/customers";
+      const response = await fetch(url);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCustomers(data.customers || []);
+        setHasFetched(true);
+      } else {
+        // Handle non-ok responses
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        console.error("Failed to fetch customers:", response.status, errorData);
+        setCustomers([]); // Set empty array to show "no customers" state
+        setHasFetched(true);
+        toast({
+          title: "Error",
+          description: errorData.error || `Failed to load customers (${response.status})`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch customers:", error);
+      setCustomers([]); // Set empty array to show "no customers" state
+      setHasFetched(true);
+      toast({
+        title: "Error",
+        description: "Failed to load customers. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [search, toast]);
+
   useEffect(() => {
     if (status === "authenticated") {
       fetchCustomers();
     } else if (status === "unauthenticated") {
       window.location.href = "/auth/signin";
     }
-  }, [status]);
+  }, [status, fetchCustomers]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (status === "authenticated") {
+    if (status === "authenticated") {
+      const timeoutId = setTimeout(() => {
         fetchCustomers();
-      }
-    }, 300);
+      }, 300);
 
-    return () => clearTimeout(timeoutId);
-  }, [search]);
-
-  const fetchCustomers = async () => {
-    try {
-      const url = search
-        ? `/api/customers?search=${encodeURIComponent(search)}`
-        : "/api/customers";
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        setCustomers(data.customers || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch customers:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load customers",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      return () => clearTimeout(timeoutId);
     }
-  };
+  }, [search, status, fetchCustomers]);
 
   const onSubmit = async (data: CustomerFormValues) => {
     setSaving(true);
@@ -244,7 +261,36 @@ export default function CustomersPage() {
     }
   };
 
-  if (status === "loading" || loading) {
+  // Show loading state only if session is loading OR we're actively fetching
+  if (status === "loading") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-10 w-64 mb-2" />
+          <Skeleton className="h-5 w-96" />
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-64 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // If not authenticated and not loading, redirect (handled by useEffect)
+  if (status === "unauthenticated") {
+    return null;
+  }
+
+  // Show loading skeleton while fetching data (only on first load)
+  if (loading && !hasFetched) {
     return (
       <div className="space-y-6">
         <div>

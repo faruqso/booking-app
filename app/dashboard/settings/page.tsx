@@ -19,7 +19,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Settings as SettingsIcon, Clock, X, AlertCircle, HelpCircle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Settings as SettingsIcon, Clock, X, AlertCircle, HelpCircle, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
 import { Separator } from "@/components/ui/separator";
@@ -32,12 +33,33 @@ const bookingRulesSchema = z.object({
 
 type BookingRulesFormValues = z.infer<typeof bookingRulesSchema>;
 
+const whatsappSettingsSchema = z.object({
+  whatsappPhoneNumber: z.string().optional().nullable(),
+  whatsappAccessToken: z.string().optional().nullable(),
+  whatsappPhoneNumberId: z.string().optional().nullable(),
+  whatsappBusinessAccountId: z.string().optional().nullable(),
+  whatsappNotificationsEnabled: z.boolean().optional(),
+});
+
+type WhatsAppSettingsFormValues = z.infer<typeof whatsappSettingsSchema>;
+
+const smsSettingsSchema = z.object({
+  twilioAccountSid: z.string().optional().nullable(),
+  twilioAuthToken: z.string().optional().nullable(),
+  twilioPhoneNumber: z.string().optional().nullable(),
+  smsRemindersEnabled: z.boolean().optional(),
+});
+
+type SMSSettingsFormValues = z.infer<typeof smsSettingsSchema>;
+
 export default function SettingsPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingWhatsApp, setSavingWhatsApp] = useState(false);
+  const [savingSMS, setSavingSMS] = useState(false);
 
   const form = useForm<BookingRulesFormValues>({
     resolver: zodResolver(bookingRulesSchema),
@@ -48,11 +70,34 @@ export default function SettingsPage() {
     },
   });
 
+  const whatsappForm = useForm<WhatsAppSettingsFormValues>({
+    resolver: zodResolver(whatsappSettingsSchema),
+    defaultValues: {
+      whatsappPhoneNumber: "",
+      whatsappAccessToken: "",
+      whatsappPhoneNumberId: "",
+      whatsappBusinessAccountId: "",
+      whatsappNotificationsEnabled: false,
+    },
+  });
+
+  const smsForm = useForm<SMSSettingsFormValues>({
+    resolver: zodResolver(smsSettingsSchema),
+    defaultValues: {
+      twilioAccountSid: "",
+      twilioAuthToken: "",
+      twilioPhoneNumber: "",
+      smsRemindersEnabled: false,
+    },
+  });
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/auth/signin");
     } else if (status === "authenticated") {
       fetchBookingRules();
+      fetchWhatsAppSettings();
+      fetchSMSSettings();
     }
   }, [status, router]);
 
@@ -76,6 +121,41 @@ export default function SettingsPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWhatsAppSettings = async () => {
+    try {
+      const response = await fetch("/api/business/whatsapp-settings");
+      if (response.ok) {
+        const data = await response.json();
+        whatsappForm.reset({
+          whatsappPhoneNumber: data.whatsappPhoneNumber || "",
+          whatsappAccessToken: data.hasAccessToken ? "••••••••" : "", // Don't show actual token
+          whatsappPhoneNumberId: data.whatsappPhoneNumberId || "",
+          whatsappBusinessAccountId: data.whatsappBusinessAccountId || "",
+          whatsappNotificationsEnabled: data.whatsappNotificationsEnabled ?? false,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch WhatsApp settings:", error);
+    }
+  };
+
+  const fetchSMSSettings = async () => {
+    try {
+      const response = await fetch("/api/business/sms-config");
+      if (response.ok) {
+        const data = await response.json();
+        smsForm.reset({
+          twilioPhoneNumber: data.twilioPhoneNumber || "",
+          twilioAccountSid: "", // Don't show actual credentials
+          twilioAuthToken: "", // Don't show actual credentials
+          smsRemindersEnabled: data.smsRemindersEnabled ?? false,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch SMS settings:", error);
     }
   };
 
@@ -106,6 +186,87 @@ export default function SettingsPage() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const onWhatsAppSubmit = async (data: WhatsAppSettingsFormValues) => {
+    setSavingWhatsApp(true);
+    try {
+      // If access token is masked (••••••••), don't send it (keep existing)
+      const updateData = { ...data };
+      if (data.whatsappAccessToken === "••••••••") {
+        delete updateData.whatsappAccessToken;
+      }
+
+      const response = await fetch("/api/business/whatsapp-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update WhatsApp settings");
+      }
+
+      toast({
+        title: "Success",
+        description: "WhatsApp settings updated successfully!",
+      });
+
+      // Refresh settings to get updated data
+      await fetchWhatsAppSettings();
+    } catch (error: any) {
+      console.error("Failed to update WhatsApp settings:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update WhatsApp settings",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingWhatsApp(false);
+    }
+  };
+
+  const onSMSSubmit = async (data: SMSSettingsFormValues) => {
+    setSavingSMS(true);
+    try {
+      // If auth token is empty/masked, don't send it (keep existing)
+      const updateData: any = { ...data };
+      if (!data.twilioAuthToken || data.twilioAuthToken === "") {
+        delete updateData.twilioAuthToken;
+      }
+      if (!data.twilioAccountSid || data.twilioAccountSid === "") {
+        delete updateData.twilioAccountSid;
+      }
+
+      const response = await fetch("/api/business/sms-config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update SMS settings");
+      }
+
+      toast({
+        title: "Success",
+        description: "SMS settings updated successfully!",
+      });
+
+      // Refresh settings to get updated data
+      await fetchSMSSettings();
+    } catch (error: any) {
+      console.error("Failed to update SMS settings:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update SMS settings",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingSMS(false);
     }
   };
 
@@ -293,6 +454,168 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* WhatsApp Settings Card */}
+      <Card className="border-2">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-primary" />
+            <CardTitle>WhatsApp Notifications</CardTitle>
+          </div>
+          <CardDescription>
+            Configure WhatsApp notifications to receive real-time alerts when customers create, cancel, or modify bookings.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...whatsappForm}>
+            <form onSubmit={whatsappForm.handleSubmit(onWhatsAppSubmit)} className="space-y-6">
+              {/* Enable Notifications Toggle */}
+              <FormField
+                control={whatsappForm.control}
+                name="whatsappNotificationsEnabled"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-base">
+                        Enable WhatsApp Notifications
+                      </FormLabel>
+                      <FormDescription className="text-sm">
+                        Receive WhatsApp messages when bookings are created, cancelled, or modified.
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              <Separator />
+
+              {/* WhatsApp Phone Number */}
+              <FormField
+                control={whatsappForm.control}
+                name="whatsappPhoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">WhatsApp Phone Number</FormLabel>
+                    <FormDescription className="text-sm">
+                      Your business WhatsApp number in E.164 format (e.g., +1234567890)
+                    </FormDescription>
+                    <FormControl>
+                      <Input
+                        type="tel"
+                        placeholder="+1234567890"
+                        className="h-11 text-base"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Access Token */}
+              <FormField
+                control={whatsappForm.control}
+                name="whatsappAccessToken"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">Access Token</FormLabel>
+                    <FormDescription className="text-sm">
+                      WhatsApp Cloud API access token from Meta Business Manager
+                    </FormDescription>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Enter access token"
+                        className="h-11 text-base font-mono"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Phone Number ID */}
+              <FormField
+                control={whatsappForm.control}
+                name="whatsappPhoneNumberId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">Phone Number ID</FormLabel>
+                    <FormDescription className="text-sm">
+                      WhatsApp phone number ID from Meta Business Manager
+                    </FormDescription>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        placeholder="Phone number ID"
+                        className="h-11 text-base"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Business Account ID */}
+              <FormField
+                control={whatsappForm.control}
+                name="whatsappBusinessAccountId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">Business Account ID (Optional)</FormLabel>
+                    <FormDescription className="text-sm">
+                      WhatsApp Business Account ID (optional, for advanced configurations)
+                    </FormDescription>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        placeholder="Business account ID"
+                        className="h-11 text-base"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Submit Button */}
+              <div className="flex justify-end gap-4 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.push("/dashboard")}
+                  disabled={savingWhatsApp}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={savingWhatsApp}>
+                  {savingWhatsApp ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save WhatsApp Settings"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+
       {/* Info Card */}
       <Card className="border-2 bg-blue-50/50 dark:bg-blue-950/20">
         <CardHeader>
@@ -321,6 +644,197 @@ export default function SettingsPage() {
               <span><strong>Buffer Time:</strong> Automatically adds time gaps between bookings, giving you time to reset, prepare, or take breaks.</span>
             </li>
           </ul>
+        </CardContent>
+      </Card>
+
+      {/* SMS Settings Card */}
+      <Card className="border-2">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-primary" />
+            <CardTitle>SMS Notifications</CardTitle>
+          </div>
+          <CardDescription>
+            Configure SMS notifications to send booking confirmations and reminders to customers via Twilio.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...smsForm}>
+            <form onSubmit={smsForm.handleSubmit(onSMSSubmit)} className="space-y-6">
+              {/* Enable SMS Reminders Toggle */}
+              <FormField
+                control={smsForm.control}
+                name="smsRemindersEnabled"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-base">
+                        Enable SMS Reminders
+                      </FormLabel>
+                      <FormDescription className="text-sm">
+                        Send SMS reminders to customers about their upcoming bookings.
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              <Separator />
+
+              {/* Twilio Phone Number */}
+              <FormField
+                control={smsForm.control}
+                name="twilioPhoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">Twilio Phone Number</FormLabel>
+                    <FormDescription className="text-sm">
+                      Your Twilio phone number in E.164 format (e.g., +1234567890)
+                    </FormDescription>
+                    <FormControl>
+                      <Input
+                        type="tel"
+                        placeholder="+1234567890"
+                        className="h-11 text-base"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Twilio Account SID */}
+              <FormField
+                control={smsForm.control}
+                name="twilioAccountSid"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">Twilio Account SID</FormLabel>
+                    <FormDescription className="text-sm">
+                      Your Twilio Account SID from the Twilio Console
+                    </FormDescription>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Enter Account SID (leave blank to keep current)"
+                        className="h-11 text-base font-mono"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Twilio Auth Token */}
+              <FormField
+                control={smsForm.control}
+                name="twilioAuthToken"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">Twilio Auth Token</FormLabel>
+                    <FormDescription className="text-sm">
+                      Your Twilio Auth Token from the Twilio Console
+                    </FormDescription>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Enter Auth Token (leave blank to keep current)"
+                        className="h-11 text-base font-mono"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Submit Button */}
+              <div className="flex justify-end gap-4 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.push("/dashboard")}
+                  disabled={savingSMS}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={savingSMS}>
+                  {savingSMS ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save SMS Settings"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+
+      {/* WhatsApp Setup Info Card */}
+      <Card className="border-2 bg-green-50/50 dark:bg-green-950/20">
+        <CardHeader>
+          <div className="flex items-start gap-2">
+            <HelpCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+            <div>
+              <CardTitle className="text-base">WhatsApp Setup Instructions</CardTitle>
+              <CardDescription className="text-sm mt-1">
+                To enable WhatsApp notifications, you need to set up WhatsApp Cloud API:
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
+            <li>Create a Meta Business Account at <a href="https://business.facebook.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">business.facebook.com</a></li>
+            <li>Set up a WhatsApp Business Account</li>
+            <li>Get your access token and phone number ID from Meta Business Manager</li>
+            <li>Create and approve message templates (see documentation for details)</li>
+            <li>Enter your credentials above and enable notifications</li>
+          </ol>
+          <p className="text-xs text-muted-foreground mt-4">
+            Note: The first 1,000 conversations per month are typically free. Template messages must be approved by Meta before use.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* SMS Setup Info Card */}
+      <Card className="border-2 bg-blue-50/50 dark:bg-blue-950/20">
+        <CardHeader>
+          <div className="flex items-start gap-2">
+            <HelpCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+            <div>
+              <CardTitle className="text-base">SMS Setup Instructions</CardTitle>
+              <CardDescription className="text-sm mt-1">
+                To enable SMS notifications, you need to set up a Twilio account:
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
+            <li>Create a Twilio account at <a href="https://www.twilio.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">twilio.com</a></li>
+            <li>Purchase a phone number from Twilio (or use a trial number for testing)</li>
+            <li>Get your Account SID and Auth Token from the Twilio Console</li>
+            <li>Enter your credentials above and enable SMS reminders</li>
+          </ol>
+          <p className="text-xs text-muted-foreground mt-4">
+            Note: SMS messages are sent automatically when customers create or cancel bookings. Reminders are sent based on your booking settings.
+          </p>
         </CardContent>
       </Card>
     </div>
