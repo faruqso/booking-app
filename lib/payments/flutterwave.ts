@@ -1,3 +1,4 @@
+// @ts-ignore - No type definitions available for flutterwave-node-v3
 import Flutterwave from "flutterwave-node-v3";
 
 export interface FlutterwaveConfig {
