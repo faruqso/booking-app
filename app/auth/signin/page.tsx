@@ -53,11 +53,19 @@ function SignInContent() {
 
       if (result?.error) {
         console.error("Sign in error:", result.error);
+        let errorMessage = "Unable to sign in. Please try again.";
+        
+        if (result.error === "CredentialsSignin") {
+          errorMessage = "Invalid email or password. Please check your credentials and try again.";
+        } else if (result.error.includes("Configuration")) {
+          errorMessage = "Server configuration error. Please contact support.";
+        } else if (result.error.includes("AccessDenied")) {
+          errorMessage = "Access denied. Please check your account status.";
+        }
+        
         toast({
           title: "Error",
-          description: result.error === "CredentialsSignin" 
-            ? "Invalid email or password. Please check your credentials and try again."
-            : "Unable to sign in. Please try again.",
+          description: errorMessage,
           variant: "destructive",
         });
       } else {

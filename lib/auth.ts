@@ -84,7 +84,7 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' || !!process.env.VERCEL,
       },
     },
   },
@@ -109,7 +109,7 @@ export const authOptions: NextAuthOptions = {
     signIn: "/auth/signin",
     error: "/auth/signin", // Redirect errors back to signin page
   },
-  secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === "development", // Enable debug in development
+  secret: process.env.NEXTAUTH_SECRET || (process.env.VERCEL ? "fallback-secret-change-in-production" : undefined),
+  debug: process.env.NODE_ENV === "development" || !!process.env.VERCEL, // Enable debug in development and Vercel
 };
 
