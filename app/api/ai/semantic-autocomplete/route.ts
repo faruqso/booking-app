@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { generateEmbeddingViaGateway } from '@/lib/ai/gateway-wrapper';
-import { getServiceSuggestions, SERVICE_DATABASE } from '@/lib/ai/service-database';
+import { SERVICE_DATABASE } from '@/lib/ai/service-database';
 import { checkBudget } from '@/lib/ai/budget-manager';
 import Fuse from 'fuse.js';
 
