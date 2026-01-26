@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 // This route is not needed since we use next-auth's signIn function on the client
 // But we can keep it for API compatibility if needed
-export async function POST(request: Request) {
+export async function POST(_request: Request) {
   return NextResponse.json(
     { error: "Use next-auth signIn function on the client" },
     { status: 405 }
