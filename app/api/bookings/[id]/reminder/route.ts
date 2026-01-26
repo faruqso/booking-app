@@ -22,6 +22,7 @@ export async function POST(
       include: {
         business: {
           select: {
+            id: true,
             businessName: true,
             logoUrl: true,
             primaryColor: true,
@@ -36,7 +37,7 @@ export async function POST(
     }
 
     // Verify the booking belongs to the user's business
-    if (booking.business.ownerId !== session.user.id) {
+    if (!session.user.businessId || booking.businessId !== session.user.businessId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -45,11 +46,11 @@ export async function POST(
       booking.customerEmail,
       {
         customerName: booking.customerName,
-        businessName: booking.business.name,
+        businessName: booking.business.businessName,
         serviceName: booking.service?.name || "Service",
         startTime: new Date(booking.startTime),
-        businessLogoUrl: booking.business.branding?.logoUrl || null,
-        primaryColor: booking.business.branding?.primaryColor || undefined,
+        businessLogoUrl: booking.business.logoUrl || null,
+        primaryColor: booking.business.primaryColor || undefined,
       }
     );
 
