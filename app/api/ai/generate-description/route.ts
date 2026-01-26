@@ -8,7 +8,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
 import { generateTextViaGateway } from '@/lib/ai/gateway-wrapper';
 import { generateServiceDescription } from '@/lib/ai/local-ai';
 import { checkBudget } from '@/lib/ai/budget-manager';
