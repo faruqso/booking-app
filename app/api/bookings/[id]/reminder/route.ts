@@ -21,8 +21,10 @@ export async function POST(
       where: { id },
       include: {
         business: {
-          include: {
-            branding: true,
+          select: {
+            businessName: true,
+            logoUrl: true,
+            primaryColor: true,
           },
         },
         service: true,
