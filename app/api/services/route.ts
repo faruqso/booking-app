@@ -18,7 +18,6 @@ const serviceSchema = z.object({
   imageUrl: z.union([z.string().url(), z.literal("")]).optional(),
   category: z.string().max(50).optional(),
   maxCapacity: z.number().min(1).max(100).int().optional().default(1),
-  cancellationPolicyHours: z.number().min(0).int().optional(),
 });
 
 export async function GET(request: Request) {

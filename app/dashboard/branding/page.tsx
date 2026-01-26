@@ -19,25 +19,41 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Palette, Building2, Upload, X, Sparkles, AlertCircle, Type, Globe } from "lucide-react";
+import { Loader2, Palette, Building2, Upload, X, Sparkles, AlertCircle, Type, Globe, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { POPULAR_GOOGLE_FONTS } from "@/lib/google-fonts";
+import { ImageEditor } from "@/components/ui/image-editor";
 
 const brandingSchema = z.object({
   businessName: z.string().min(2, "Business name must be at least 2 characters"),
-  primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format"),
+  primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format. Use hex format like #3b82f6"),
   logoUrl: z.string().optional(),
-  // Phase 2 Enhanced Branding
-  secondaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format").optional().or(z.literal("")),
-  accentColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format").optional().or(z.literal("")),
-  backgroundColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format").optional().or(z.literal("")),
-  textColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format").optional().or(z.literal("")),
+  // Phase 2 Enhanced Branding - Allow empty strings or valid hex colors
+  secondaryColor: z.union([
+    z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format. Use hex format like #3b82f6"),
+    z.literal("")
+  ]).optional(),
+  accentColor: z.union([
+    z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format. Use hex format like #3b82f6"),
+    z.literal("")
+  ]).optional(),
+  backgroundColor: z.union([
+    z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format. Use hex format like #3b82f6"),
+    z.literal("")
+  ]).optional(),
+  textColor: z.union([
+    z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid color format. Use hex format like #3b82f6"),
+    z.literal("")
+  ]).optional(),
   fontFamily: z.string().optional(),
   faviconUrl: z.string().optional(),
-  subdomain: z.string().min(3, "Subdomain must be at least 3 characters").max(63, "Subdomain too long").regex(/^[a-z0-9-]+$/, "Subdomain can only contain lowercase letters, numbers, and hyphens").optional().or(z.literal("")),
+  subdomain: z.union([
+    z.string().min(3, "Subdomain must be at least 3 characters").max(63, "Subdomain too long").regex(/^[a-z0-9-]+$/, "Subdomain can only contain lowercase letters, numbers, and hyphens"),
+    z.literal("")
+  ]).optional(),
 });
 
 type BrandingFormValues = z.infer<typeof brandingSchema>;
@@ -52,6 +68,8 @@ export default function BrandingPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
   const [faviconFile, setFaviconFile] = useState<File | null>(null);
+  const [logoEditorOpen, setLogoEditorOpen] = useState(false);
+  const [logoEditorSrc, setLogoEditorSrc] = useState<string>("");
 
   const form = useForm<BrandingFormValues>({
     resolver: zodResolver(brandingSchema),
@@ -139,14 +157,27 @@ export default function BrandingPage() {
 
     setLogoFile(file);
 
-    // Create preview
+    // Create preview and open editor
     const reader = new FileReader();
     reader.onloadend = () => {
       const result = reader.result as string;
-      setLogoPreview(result);
-      form.setValue("logoUrl", result);
+      setLogoEditorSrc(result);
+      setLogoEditorOpen(true);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleLogoEdit = () => {
+    if (logoPreview) {
+      setLogoEditorSrc(logoPreview);
+      setLogoEditorOpen(true);
+    }
+  };
+
+  const handleLogoSave = (croppedImage: string) => {
+    setLogoPreview(croppedImage);
+    form.setValue("logoUrl", croppedImage);
+    setLogoEditorOpen(false);
   };
 
   const removeLogo = () => {
@@ -332,15 +363,26 @@ export default function BrandingPage() {
                                 className="w-full h-full object-contain"
                               />
                             </div>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                              onClick={removeLogo}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
+                            <div className="absolute -top-2 -right-2 flex gap-1">
+                              <Button
+                                type="button"
+                                variant="default"
+                                size="sm"
+                                className="h-6 w-6 rounded-full p-0"
+                                onClick={handleLogoEdit}
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                className="h-6 w-6 rounded-full p-0"
+                                onClick={removeLogo}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                         ) : (
                           <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-muted rounded-lg cursor-pointer bg-muted/50 hover:bg-muted/70 transition-colors">
@@ -394,13 +436,31 @@ export default function BrandingPage() {
                           type="text"
                           placeholder="#3b82f6"
                           className="h-11 text-base font-mono max-w-[120px]"
-                          {...field}
+                          value={field.value || ""}
                           onChange={(e) => {
-                            const value = e.target.value;
-                            if (value.startsWith("#") || value === "") {
+                            let value = e.target.value.trim();
+                            // Allow empty or valid hex format
+                            if (value === "") {
                               field.onChange(value);
-                            } else {
-                              field.onChange(`#${value}`);
+                            } else if (value.startsWith("#")) {
+                              // Ensure uppercase for consistency
+                              field.onChange(value.toUpperCase());
+                            } else if (/^[0-9A-Fa-f]{0,6}$/.test(value)) {
+                              // Allow typing without #, will add it
+                              field.onChange(`#${value.toUpperCase()}`);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            // Validate on blur - ensure it's a valid hex color
+                            const value = e.target.value.trim();
+                            if (value && !/^#[0-9A-Fa-f]{6}$/i.test(value)) {
+                              // If invalid, try to fix or reset to default
+                              if (/^[0-9A-Fa-f]{6}$/i.test(value.replace("#", ""))) {
+                                field.onChange(`#${value.replace("#", "").toUpperCase()}`);
+                              } else {
+                                // Invalid format, reset to previous valid value or default
+                                field.onChange(field.value || "#3b82f6");
+                              }
                             }
                           }}
                         />
@@ -455,11 +515,23 @@ export default function BrandingPage() {
                               className="h-11 text-base font-mono max-w-[120px]"
                               value={field.value || ""}
                               onChange={(e) => {
-                                const value = e.target.value;
-                                if (value.startsWith("#") || value === "") {
+                                let value = e.target.value.trim();
+                                if (value === "") {
                                   field.onChange(value);
-                                } else {
-                                  field.onChange(`#${value}`);
+                                } else if (value.startsWith("#")) {
+                                  field.onChange(value.toUpperCase());
+                                } else if (/^[0-9A-Fa-f]{0,6}$/.test(value)) {
+                                  field.onChange(`#${value.toUpperCase()}`);
+                                }
+                              }}
+                              onBlur={(e) => {
+                                const value = e.target.value.trim();
+                                if (value && !/^#[0-9A-Fa-f]{6}$/i.test(value)) {
+                                  if (/^[0-9A-Fa-f]{6}$/i.test(value.replace("#", ""))) {
+                                    field.onChange(`#${value.replace("#", "").toUpperCase()}`);
+                                  } else {
+                                    field.onChange("");
+                                  }
                                 }
                               }}
                             />
@@ -581,11 +653,23 @@ export default function BrandingPage() {
                               className="h-11 text-base font-mono max-w-[120px]"
                               value={field.value || ""}
                               onChange={(e) => {
-                                const value = e.target.value;
-                                if (value.startsWith("#") || value === "") {
+                                let value = e.target.value.trim();
+                                if (value === "") {
                                   field.onChange(value);
-                                } else {
-                                  field.onChange(`#${value}`);
+                                } else if (value.startsWith("#")) {
+                                  field.onChange(value.toUpperCase());
+                                } else if (/^[0-9A-Fa-f]{0,6}$/.test(value)) {
+                                  field.onChange(`#${value.toUpperCase()}`);
+                                }
+                              }}
+                              onBlur={(e) => {
+                                const value = e.target.value.trim();
+                                if (value && !/^#[0-9A-Fa-f]{6}$/i.test(value)) {
+                                  if (/^[0-9A-Fa-f]{6}$/i.test(value.replace("#", ""))) {
+                                    field.onChange(`#${value.replace("#", "").toUpperCase()}`);
+                                  } else {
+                                    field.onChange("");
+                                  }
                                 }
                               }}
                             />
@@ -826,6 +910,18 @@ export default function BrandingPage() {
           </ul>
         </CardContent>
       </Card>
+
+      {/* Image Editor Modal */}
+      {logoEditorSrc && (
+        <ImageEditor
+          imageSrc={logoEditorSrc}
+          isOpen={logoEditorOpen}
+          onClose={() => setLogoEditorOpen(false)}
+          onSave={handleLogoSave}
+          aspectRatio={1}
+          shape="square"
+        />
+      )}
     </div>
   );
 }

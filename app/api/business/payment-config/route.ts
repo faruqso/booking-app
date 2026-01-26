@@ -3,11 +3,13 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { getCurrenciesForProvider, SUPPORTED_CURRENCIES } from "@/lib/utils/currency";
 
 export const dynamic = 'force-dynamic';
 
 const paymentConfigSchema = z.object({
   paymentProvider: z.enum(["stripe", "paystack", "flutterwave"]).nullable().optional(),
+  currency: z.string().min(3).max(3).optional().or(z.literal("")), // ISO 4217 currency code (USD, NGN, GHS, etc.)
   stripePublishableKey: z.string().optional().nullable(),
   stripeSecretKey: z.string().optional().nullable(),
   stripeWebhookSecret: z.string().optional().nullable(),
@@ -37,6 +39,7 @@ export async function GET(request: Request) {
       select: {
         id: true,
         paymentProvider: true,
+        currency: true,
         stripePublishableKey: true,
         paystackPublicKey: true,
         flutterwavePublicKey: true,
@@ -82,6 +85,20 @@ export async function PUT(request: Request) {
       );
     }
 
+    // Test database connection first
+    try {
+      await prisma.$connect();
+    } catch (dbError: any) {
+      console.error("Database connection failed:", dbError);
+      return NextResponse.json(
+        { 
+          error: "Database connection failed. Your Neon database may be paused. Please check your Neon dashboard and ensure the database is active.",
+          details: process.env.NODE_ENV === "development" ? dbError.message : undefined
+        },
+        { status: 503 }
+      );
+    }
+
     const body = await request.json();
     const validatedData = paymentConfigSchema.parse(body);
 
@@ -90,6 +107,30 @@ export async function PUT(request: Request) {
 
     if (validatedData.paymentProvider !== undefined) {
       updateData.paymentProvider = validatedData.paymentProvider;
+    }
+    if (validatedData.currency !== undefined) {
+      // Only update currency if it's a valid 3-character code, otherwise use default
+      const currency = validatedData.currency && validatedData.currency.length === 3 
+        ? validatedData.currency 
+        : "USD";
+      
+      // Validate currency is supported by the payment provider
+      if (validatedData.paymentProvider) {
+        const supportedCurrencies = getCurrenciesForProvider(validatedData.paymentProvider);
+        const isSupported = supportedCurrencies.some(c => c.code === currency);
+        
+        if (!isSupported) {
+          const supportedCodes = supportedCurrencies.map(c => c.code).join(", ");
+          return NextResponse.json(
+            { 
+              error: `Currency ${currency} is not supported by ${validatedData.paymentProvider}. Supported currencies: ${supportedCodes}` 
+            },
+            { status: 400 }
+          );
+        }
+      }
+      
+      updateData.currency = currency;
     }
 
     // Only update keys if provided (don't clear if not provided)
@@ -136,6 +177,7 @@ export async function PUT(request: Request) {
       select: {
         id: true,
         paymentProvider: true,
+        currency: true,
         stripePublishableKey: true,
         paystackPublicKey: true,
         flutterwavePublicKey: true,
@@ -147,15 +189,31 @@ export async function PUT(request: Request) {
     return NextResponse.json(business);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
+      console.error("Payment config validation error:", error.errors);
       return NextResponse.json(
-        { error: error.errors[0].message },
+        { error: error.errors[0].message, details: error.errors },
         { status: 400 }
       );
     }
 
     console.error("Payment config update error:", error);
+    console.error("Error stack:", error.stack);
+    
+    // Check if it's a database connection error
+    if (error.message?.includes("Can't reach database server") || 
+        error.message?.includes("connect ECONNREFUSED") ||
+        error.code === "P1001") {
+      return NextResponse.json(
+        { 
+          error: "Database connection failed. Your Neon database may be paused. Please check your Neon dashboard and ensure the database is active, then try again.",
+          code: "DATABASE_CONNECTION_ERROR"
+        },
+        { status: 503 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: "Failed to update payment configuration" },
+      { error: error.message || "Failed to update payment configuration" },
       { status: 500 }
     );
   }

@@ -70,12 +70,14 @@ model VerificationToken {
 }
 
 model Business {
-  id       String  @id @default(cuid())
-  name     String
-  email    String
-  phone    String?
-  address  String?
-  timezone String  @default("UTC")
+  id         String  @id @default(cuid())
+  name       String
+  email      String
+  phone      String?
+  address    String?
+  timezone   String  @default("UTC")
+  dateFormat String  @default("MMM d, yyyy") // Date format for display
+  timeFormat String  @default("h:mm a") // Time format (12h or 24h)
 
   // Branding (Phase 1 - Basic)
   logoUrl      String?
@@ -100,6 +102,7 @@ model Business {
 
   // Payment Integration (Phase 2)
   paymentProvider          String? // "stripe", "paystack", "flutterwave", or null for no payments
+  currency                 String  @default("USD") // Currency code (USD, NGN, GHS, ZAR, KES, etc.)
   stripePublishableKey     String? // Stripe publishable key
   stripeSecretKey          String? @db.Text // Stripe secret key (encrypted)
   stripeWebhookSecret      String? @db.Text // Stripe webhook secret (encrypted)
@@ -119,10 +122,10 @@ model Business {
   smsRemindersEnabled Boolean @default(false) // Enable SMS reminders
 
   // WhatsApp Notifications (Phase 2)
-  whatsappPhoneNumber        String? // Business WhatsApp phone number (e.g., +1234567890)
-  whatsappAccessToken        String? @db.Text // WhatsApp Cloud API access token
-  whatsappPhoneNumberId      String? // WhatsApp phone number ID from Meta
-  whatsappBusinessAccountId  String? // WhatsApp Business Account ID
+  whatsappPhoneNumber          String? // Business WhatsApp phone number (e.g., +1234567890)
+  whatsappAccessToken          String? @db.Text // WhatsApp Cloud API access token
+  whatsappPhoneNumberId        String? // WhatsApp phone number ID from Meta
+  whatsappBusinessAccountId    String? // WhatsApp Business Account ID
   whatsappNotificationsEnabled Boolean @default(false) // Enable/disable WhatsApp notifications
 
   // Settings

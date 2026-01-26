@@ -22,7 +22,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Autocomplete, AutocompleteOption } from "@/components/ui/autocomplete";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Clock, DollarSign, CheckCircle2, XCircle, Sparkles, Wand2, Lightbulb, Image, Tag, Users, CalendarX, Timer, MapPin } from "lucide-react";
+import { Loader2, Clock, DollarSign, CheckCircle2, XCircle, Sparkles, Wand2, Lightbulb, Image, Tag, Users, Timer, MapPin, Upload, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -30,6 +30,7 @@ import {
   detectCategory, 
   getDurationSuggestion, 
   getPriceSuggestion,
+  SERVICE_CATEGORIES,
   type ServiceCategory 
 } from "@/lib/ai/service-database";
 import { formatValidationError, getValidationTip } from "@/lib/ai/form-validation";
@@ -56,7 +57,6 @@ const serviceSchema = z.object({
   imageUrl: z.union([z.string().url("Must be a valid URL"), z.literal("")]).optional(),
   category: z.string().max(50, "Category must be less than 50 characters").optional(),
   maxCapacity: z.number().min(1).max(100).int().optional(),
-  cancellationPolicyHours: z.number().min(0).int().optional(),
 });
 
 type ServiceFormValues = z.infer<typeof serviceSchema>;
@@ -75,7 +75,6 @@ interface Service {
   imageUrl?: string;
   category?: string;
   maxCapacity?: number;
-  cancellationPolicyHours?: number;
 }
 
 interface Location {
@@ -101,6 +100,8 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
   const [generatingDescription, setGeneratingDescription] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loadingLocations, setLoadingLocations] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   const form = useForm<ServiceFormValues>({
@@ -117,7 +118,6 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
       imageUrl: service?.imageUrl || "",
       category: service?.category || "",
       maxCapacity: service?.maxCapacity ?? 1,
-      cancellationPolicyHours: service?.cancellationPolicyHours,
     },
   });
 
@@ -156,8 +156,13 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
         imageUrl: service.imageUrl || "",
         category: service.category || "",
         maxCapacity: service.maxCapacity ?? 1,
-        cancellationPolicyHours: service.cancellationPolicyHours,
       });
+      if (service.imageUrl) {
+        setImagePreview(service.imageUrl);
+      } else {
+        setImagePreview(null);
+      }
+      setImageFile(null);
     } else {
       form.reset({
         name: "",
@@ -171,7 +176,6 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
         imageUrl: "",
         category: "",
         maxCapacity: 1,
-        cancellationPolicyHours: undefined,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -192,6 +196,46 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
       }
     };
   }, [hideActions]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB for service images)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setImagePreview(base64String);
+      form.setValue("imageUrl", base64String);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    setImagePreview(null);
+    setImageFile(null);
+    form.setValue("imageUrl", "");
+  };
 
   const onSubmit = async (data: ServiceFormValues) => {
     setLoading(true);
@@ -813,18 +857,76 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
                     <FormItem>
                       <FormLabel className="text-base flex items-center gap-2">
                         <Image className="h-4 w-4" />
-                        Image URL
+                        Service Image
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          type="url"
-                          placeholder="https://example.com/image.jpg"
-                          className="h-11"
-                          {...field}
-                        />
+                        <div className="space-y-3">
+                          {imagePreview ? (
+                            <div className="relative">
+                              <div className="relative w-full h-48 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden bg-gray-50">
+                                <img
+                                  src={imagePreview}
+                                  alt="Service preview"
+                                  className="w-full h-full object-cover"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={handleRemoveImage}
+                                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                              <Input
+                                type="url"
+                                placeholder="Or enter image URL"
+                                className="h-11 mt-2"
+                                value={field.value || ""}
+                                onChange={(e) => {
+                                  field.onChange(e.target.value);
+                                  if (e.target.value) {
+                                    setImagePreview(e.target.value);
+                                    setImageFile(null);
+                                  }
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleImageUpload}
+                                  className="hidden"
+                                  id="service-image-upload"
+                                />
+                                <label
+                                  htmlFor="service-image-upload"
+                                  className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary transition-colors"
+                                >
+                                  <Upload className="h-4 w-4" />
+                                  <span className="text-sm font-medium">Upload Image</span>
+                                </label>
+                              </div>
+                              <Input
+                                type="url"
+                                placeholder="Or enter image URL"
+                                className="h-11"
+                                value={field.value || ""}
+                                onChange={(e) => {
+                                  field.onChange(e.target.value);
+                                  if (e.target.value) {
+                                    setImagePreview(e.target.value);
+                                  }
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
                       </FormControl>
                       <FormDescription className="text-sm">
-                        Optional: Add an image URL to showcase your service
+                        Optional: Upload an image or provide a URL to showcase your service (max 5MB)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -841,11 +943,25 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
                         Category
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="e.g., Hair Services, Massage, Consultation"
-                          className="h-11"
-                          {...field}
-                        />
+                        <Select
+                          onValueChange={(value) => {
+                            // Convert "none" back to empty string for form
+                            field.onChange(value === "none" ? "" : value);
+                          }}
+                          value={field.value || "none"}
+                        >
+                          <SelectTrigger className="h-11">
+                            <SelectValue placeholder="Select a category (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            {SERVICE_CATEGORIES.map((category) => (
+                              <SelectItem key={category} value={category}>
+                                {category}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </FormControl>
                       <FormDescription className="text-sm">
                         Optional: Group similar services together
@@ -884,36 +1000,6 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="cancellationPolicyHours"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base flex items-center gap-2">
-                        <CalendarX className="h-4 w-4" />
-                        Cancellation Policy (hours)
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min={0}
-                          placeholder="Leave empty for no cancellation"
-                          className="h-11"
-                          {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            field.onChange(value === "" ? undefined : (parseInt(value) || undefined));
-                          }}
-                        />
-                      </FormControl>
-                      <FormDescription className="text-sm">
-                        Hours before booking that cancellation is allowed (leave empty to disable cancellation)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
             </div>
 

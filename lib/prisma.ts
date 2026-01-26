@@ -8,7 +8,22 @@ export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
+// Helper function to test database connection
+export async function testDatabaseConnection(): Promise<boolean> {
+  try {
+    await prisma.$connect();
+    return true;
+  } catch (error: any) {
+    console.error("Database connection error:", error.message);
+    return false;
+  }
+}

@@ -65,9 +65,11 @@ export async function createStripePaymentIntent(
     };
   } catch (error: any) {
     console.error("Stripe payment intent creation error:", error);
+    // Extract more detailed error message
+    const errorMessage = error.message || error.raw?.message || "Failed to create payment intent";
     return {
       success: false,
-      error: error.message || "Failed to create payment intent",
+      error: errorMessage,
     };
   }
 }

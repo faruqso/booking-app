@@ -53,8 +53,8 @@ Do not include pricing or duration information.`;
           temperature: 0.7,
           businessId,
         });
-
-        return NextResponse.json({
+    
+    return NextResponse.json({ 
           description: result.text,
           source: 'ai-gateway',
           usage: result.usage,
@@ -77,8 +77,8 @@ Do not include pricing or duration information.`;
       return NextResponse.json({
         description: `Professional ${serviceName} service. Experience quality and expertise tailored to your needs.`,
         source: 'template',
-      });
-    }
+    });
+  }
   } catch (error: any) {
     console.error('Service description generation error:', error);
     return NextResponse.json(

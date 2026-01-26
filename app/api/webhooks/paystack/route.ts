@@ -77,11 +77,20 @@ export async function POST(request: Request) {
         });
 
         if (payment.bookingId) {
+          // Fetch current booking to check status
+          const booking = await prisma.booking.findUnique({
+            where: { id: payment.bookingId },
+            select: { status: true },
+          });
+
           await prisma.booking.update({
             where: { id: payment.bookingId },
             data: {
               paymentStatus: "COMPLETED",
               amountPaid: payment.amount,
+              // Automatically confirm booking when payment is verified
+              // Only update status if it's still PENDING (don't override manual status changes)
+              ...(booking?.status === "PENDING" && { status: "CONFIRMED" }),
             },
           });
         }

@@ -27,7 +27,7 @@ export function HelpTooltip({ content, className }: HelpTooltipProps) {
           </button>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">
-          <p className="text-sm">{content}</p>
+          <p className="text-xs leading-relaxed">{content}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

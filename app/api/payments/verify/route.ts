@@ -158,6 +158,9 @@ export async function POST(request: Request) {
           data: {
             paymentStatus: "COMPLETED",
             amountPaid: payment.amount,
+            // Automatically confirm booking when payment is verified
+            // Only update status if it's still PENDING (don't override manual status changes)
+            ...(payment.booking.status === "PENDING" && { status: "CONFIRMED" }),
           },
         });
       }

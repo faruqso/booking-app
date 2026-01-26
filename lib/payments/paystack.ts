@@ -13,6 +13,7 @@ export interface CreatePaymentParams {
   customerName?: string;
   metadata?: Record<string, string>;
   reference?: string;
+  callbackUrl?: string; // URL to redirect to after payment
 }
 
 export interface PaymentResult {
@@ -44,8 +45,15 @@ export async function createPaystackPayment(
     const paystack = getPaystackClient(config.secretKey);
 
     // Convert amount to smallest currency unit
-    // Paystack uses kobo for NGN (1 NGN = 100 kobo), pesewas for GHS, etc.
+    // Paystack uses kobo for NGN (1 NGN = 100 kobo), pesewas for GHS, cents for USD/ZAR
+    // For USD, 1 USD = 100 cents
     const amountInSmallestUnit = Math.round(params.amount * 100);
+
+    console.log("Paystack payment request:", {
+      amount: amountInSmallestUnit,
+      currency: params.currency.toUpperCase(),
+      email: params.customerEmail,
+    });
 
     const transaction = await paystack.transaction.initialize({
       amount: amountInSmallestUnit,
@@ -66,9 +74,18 @@ export async function createPaystackPayment(
         ...params.metadata,
       },
       reference: params.reference,
+      callback_url: params.callbackUrl, // Redirect URL after payment
     });
 
-    if (transaction.status && transaction.data) {
+    console.log("Paystack response:", {
+      status: transaction.status,
+      hasData: !!transaction.data,
+      message: transaction.message,
+      fullResponse: JSON.stringify(transaction, null, 2),
+    });
+
+    // Check if transaction was successful
+    if (transaction.status === true && transaction.data) {
       return {
         success: true,
         paymentReference: transaction.data.reference,
@@ -77,15 +94,37 @@ export async function createPaystackPayment(
       };
     }
 
+    // If transaction failed, extract error message
+    // Paystack returns status: false and a message when it fails
+    const errorMsg = transaction.message || "Failed to initialize payment";
+    console.error("Paystack transaction failed:", {
+      status: transaction.status,
+      message: transaction.message,
+      data: transaction.data,
+    });
+    
     return {
       success: false,
-      error: "Failed to initialize payment",
+      error: errorMsg,
     };
   } catch (error: any) {
     console.error("Paystack payment creation error:", error);
+    // Extract more detailed error message from various possible error formats
+    let errorMessage = "Failed to create payment";
+    
+    if (error.message) {
+      errorMessage = error.message;
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.response?.data?.error) {
+      errorMessage = error.response.data.error;
+    } else if (typeof error === "string") {
+      errorMessage = error;
+    }
+    
     return {
       success: false,
-      error: error.message || "Failed to create payment",
+      error: errorMessage,
     };
   }
 }

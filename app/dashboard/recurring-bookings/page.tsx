@@ -639,7 +639,7 @@ export default function RecurringBookingsPage() {
               Set up a recurring booking series that will automatically generate appointments
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 pt-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="serviceId">Service *</Label>
@@ -870,7 +870,7 @@ export default function RecurringBookingsPage() {
               />
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="pt-4">
               <Button
                 type="button"
                 variant="outline"

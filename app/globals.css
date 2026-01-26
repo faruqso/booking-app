@@ -107,3 +107,945 @@
   }
 }
 
+/* ============================================
+   CALENDAR BASE STYLES - Modern, Clean Design
+   ============================================ */
+.rbc-calendar {
+  position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Calendar Header - Clean, Modern */
+.rbc-header {
+  padding: 16px 12px !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  color: #1f2937 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  background: #f9fafb !important;
+}
+
+/* Calendar Toolbar - Enhanced */
+.rbc-toolbar {
+  padding: 20px 24px !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  margin-bottom: 0 !important;
+}
+
+.rbc-toolbar button {
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  padding: 8px 16px !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+  border: 1px solid #d1d5db !important;
+  background: #ffffff !important;
+  color: #374151 !important;
+}
+
+.rbc-toolbar button:hover {
+  background: #f3f4f6 !important;
+  border-color: #9ca3af !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.rbc-toolbar button:active {
+  transform: translateY(0);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.rbc-toolbar button.rbc-active {
+  background: #1877F2 !important;
+  color: #ffffff !important;
+  border-color: #1877F2 !important;
+  box-shadow: 0 2px 4px rgba(24, 119, 242, 0.2);
+}
+
+.rbc-toolbar-label {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: #111827 !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* Calendar Grid - Clean Borders */
+.rbc-month-view,
+.rbc-time-view,
+.rbc-day-view {
+  border: none !important;
+}
+
+.rbc-month-row {
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+.rbc-day-bg {
+  border-right: 1px solid #e5e7eb !important;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+.rbc-day-bg:last-child {
+  border-right: none !important;
+}
+
+.rbc-time-slot {
+  border-top: 1px solid #f3f4f6 !important;
+}
+
+.rbc-time-header-content {
+  border-left: 1px solid #e5e7eb !important;
+}
+
+/* Date Numbers - Better Typography */
+.rbc-date-cell {
+  padding: 8px 12px !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  color: #374151 !important;
+}
+
+.rbc-off-range-bg .rbc-date-cell {
+  color: #9ca3af !important;
+}
+
+.rbc-today .rbc-date-cell {
+  color: #1877F2 !important;
+  font-weight: 700 !important;
+}
+
+/* Keyframe animations for modern polish */
+@keyframes dragLift {
+  0% {
+    transform: scale(1) translateY(0) rotate(0deg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    filter: brightness(1) contrast(1);
+  }
+  100% {
+    transform: scale(1.1) translateY(-4px) rotate(0.5deg);
+    box-shadow: 
+      0 12px 32px rgba(24, 119, 242, 0.35),
+      0 0 0 3px rgba(24, 119, 242, 0.15),
+      0 0 32px rgba(24, 119, 242, 0.25);
+    filter: brightness(1.05) contrast(1.05);
+  }
+}
+
+@keyframes dropZonePulse {
+  0%, 100% {
+    background-color: rgba(24, 119, 242, 0.05);
+    border-color: rgba(24, 119, 242, 0.2);
+  }
+  50% {
+    background-color: rgba(24, 119, 242, 0.12);
+    border-color: rgba(24, 119, 242, 0.5);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.02);
+  }
+}
+
+/* ============================================
+   EVENT STYLES - Modern, Polished Design
+   ============================================ */
+
+/* Base Event Styles - Enhanced with modern design (Compact single-line, readable, narrow) */
+.rbc-event {
+  cursor: pointer !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border-radius: 6px !important;
+  padding: 4px 4px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+  border: none !important;
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  min-height: 24px !important;
+  max-height: 26px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  margin: 1px 2px !important;
+  /* Narrower width - fit content */
+  width: fit-content !important;
+  max-width: 90% !important;
+  min-width: auto !important;
+  /* Better text rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Event hover - Show resize handles hint and improve readability */
+.rbc-event:hover {
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.12),
+    0 2px 4px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+  transform: translateY(-1px) !important;
+  z-index: 10 !important;
+}
+
+/* Ensure text is readable on hover */
+.rbc-event:hover .rbc-event-content,
+.rbc-event:hover .rbc-event-time {
+  opacity: 1 !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+}
+
+
+/* Event Text - Better Readability */
+.rbc-event-label {
+  font-weight: 500 !important;
+  font-size: 11px !important;
+  opacity: 0.9 !important;
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  line-height: 1.3 !important;
+}
+
+.rbc-event-content {
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
+  letter-spacing: -0.01em !important;
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  /* Better text rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Ensure text doesn't break */
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+}
+
+.rbc-event-time {
+  font-weight: 500 !important;
+  font-size: 10px !important;
+  letter-spacing: 0.02em !important;
+  opacity: 0.9 !important;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1) !important;
+  text-transform: none !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+  min-width: auto !important;
+  width: auto !important;
+  /* Better text rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Enhanced Event Content Wrapper - Single line layout with minimal spacing */
+.rbc-event-content-wrapper {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 3px !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  position: relative !important;
+  justify-content: flex-start !important;
+  /* Prevent text from breaking */
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  hyphens: none !important;
+}
+
+
+
+.rbc-event-time {
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.3px !important;
+  opacity: 0.95 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
+}
+
+.rbc-event-content {
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
+  margin: 0 !important;
+}
+
+.rbc-event-label {
+  font-weight: 500 !important;
+  font-size: 11px !important;
+  opacity: 0.9 !important;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Show grab cursor on hover to indicate draggability */
+.rbc-event:hover {
+  cursor: grab !important;
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  z-index: 10 !important;
+}
+
+/* Only show grabbing when actively dragging */
+.rbc-event:active {
+  cursor: grabbing !important;
+  transform: translateY(-1px) scale(1.01) !important;
+}
+
+/* When not dragging, ensure pointer cursor for clickability */
+body:not(.rbc-addons-dnd-is-dragging) .rbc-event {
+  cursor: pointer !important;
+}
+
+body:not(.rbc-addons-dnd-is-dragging) .rbc-event:hover {
+  cursor: grab !important;
+}
+
+/* When dragging, apply grabbing cursor everywhere - override all pointer cursors */
+body.rbc-addons-dnd-is-dragging,
+body.rbc-addons-dnd-is-dragging *,
+body.rbc-addons-dnd-is-dragging *:hover,
+body.rbc-addons-dnd-is-dragging *:active,
+body.rbc-addons-dnd-is-dragging .rbc-event,
+body.rbc-addons-dnd-is-dragging .rbc-event:hover,
+body.rbc-addons-dnd-is-dragging .rbc-time-slot,
+body.rbc-addons-dnd-is-dragging .rbc-day-bg,
+body.rbc-addons-dnd-is-dragging .rbc-day-slot {
+  cursor: grabbing !important;
+  cursor: -webkit-grabbing !important;
+}
+
+/* Ensure dragged event always shows grabbing cursor */
+.rbc-addons-dnd-dragging,
+.rbc-addons-dnd-dragging *,
+.rbc-addons-dnd-dragging:hover,
+.rbc-addons-dnd-dragging:active {
+  cursor: grabbing !important;
+  cursor: -webkit-grabbing !important;
+  pointer-events: none !important;
+}
+
+/* Event being dragged - enhanced polished state matching Meta design */
+.rbc-addons-dnd-dragging {
+  opacity: 0.95 !important;
+  transform: scale(1.12) translateY(-6px) rotate(1deg) !important;
+  box-shadow: 
+    0 20px 40px rgba(24, 119, 242, 0.4),
+    0 0 0 4px rgba(24, 119, 242, 0.2),
+    0 0 40px rgba(24, 119, 242, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  border: 3px solid #1877F2 !important;
+  border-radius: 8px !important;
+  z-index: 10000 !important;
+  cursor: grabbing !important;
+  cursor: -webkit-grabbing !important;
+  animation: dragLift 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  backdrop-filter: blur(12px) saturate(1.3);
+  transition: none !important;
+  filter: brightness(1.08) contrast(1.08) saturate(1.1);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(255, 255, 255, 0.95) 50%,
+    rgba(240, 247, 255, 0.95) 100%
+  ) !important;
+  color: #111827 !important;
+  font-weight: 600 !important;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.9);
+  padding: 8px 12px !important;
+}
+
+/* ============================================
+   DATE CELL STATES - Default, Hover, Clicked, Active, Inactive, Drag-Over
+   ============================================ */
+
+/* DEFAULT STATE - Normal cell appearance */
+.rbc-time-view .rbc-time-slot,
+.rbc-month-view .rbc-day-bg,
+.rbc-time-view .rbc-day-bg,
+.rbc-day-slot {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+}
+
+/* HOVER STATE - Subtle highlight when hovering (not dragging) */
+body:not(.rbc-addons-dnd-is-dragging) .rbc-time-view .rbc-time-slot:hover {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+body:not(.rbc-addons-dnd-is-dragging) .rbc-month-view .rbc-day-bg:hover {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+body:not(.rbc-addons-dnd-is-dragging) .rbc-time-view .rbc-day-bg:hover {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+  border-left: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+body:not(.rbc-addons-dnd-is-dragging) .rbc-day-slot:hover {
+  background-color: rgba(0, 0, 0, 0.015) !important;
+}
+
+/* CLICKED STATE - Visual feedback when clicked */
+.rbc-time-view .rbc-time-slot.rbc-selected,
+.rbc-month-view .rbc-day-bg.rbc-selected,
+.rbc-time-view .rbc-day-bg.rbc-selected {
+  background-color: rgba(24, 119, 242, 0.08) !important;
+  border-color: rgba(24, 119, 242, 0.3) !important;
+  animation: cellClick 0.2s ease-out !important;
+}
+
+@keyframes cellClick {
+  0% {
+    transform: scale(1);
+    background-color: rgba(24, 119, 242, 0.15);
+  }
+  100% {
+    transform: scale(1);
+    background-color: rgba(24, 119, 242, 0.08);
+  }
+}
+
+/* ACTIVE STATE - When date is selected/active */
+.rbc-today .rbc-day-bg {
+  background-color: rgba(24, 119, 242, 0.05) !important;
+  border: 1px solid rgba(24, 119, 242, 0.2) !important;
+  font-weight: 600 !important;
+}
+
+/* INACTIVE STATE - Disabled/off-range cells */
+.rbc-off-range-bg {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+.rbc-off-range {
+  color: #9ca3af !important;
+}
+
+/* DRAG-OVER STATE - Enhanced visual feedback when dragging over cells */
+body.rbc-addons-dnd-is-dragging .rbc-time-view .rbc-time-slot:hover,
+body.rbc-addons-dnd-is-dragging .rbc-time-slot:hover {
+  background: linear-gradient(
+    to bottom,
+    rgba(24, 119, 242, 0.2) 0%,
+    rgba(24, 119, 242, 0.3) 100%
+  ) !important;
+  border-top: 4px solid rgba(24, 119, 242, 0.8) !important;
+  animation: dropZonePulse 1s ease-in-out infinite !important;
+  transform: scaleY(1.05) !important;
+  box-shadow: 
+    inset 0 4px 12px rgba(24, 119, 242, 0.3),
+    0 0 20px rgba(24, 119, 242, 0.4),
+    0 0 0 2px rgba(24, 119, 242, 0.2) !important;
+  z-index: 5 !important;
+  position: relative !important;
+}
+
+body.rbc-addons-dnd-is-dragging .rbc-month-view .rbc-day-bg:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(24, 119, 242, 0.2) 0%,
+    rgba(24, 119, 242, 0.3) 50%,
+    rgba(24, 119, 242, 0.2) 100%
+  ) !important;
+  border: 4px solid rgba(24, 119, 242, 0.8) !important;
+  border-radius: 8px !important;
+  animation: dropZonePulse 1s ease-in-out infinite !important;
+  transform: scale(1.05) !important;
+  box-shadow: 
+    inset 0 4px 12px rgba(24, 119, 242, 0.3),
+    0 0 24px rgba(24, 119, 242, 0.5),
+    0 0 0 3px rgba(24, 119, 242, 0.2) !important;
+  z-index: 5 !important;
+  position: relative !important;
+}
+
+body.rbc-addons-dnd-is-dragging .rbc-time-view .rbc-day-bg:hover {
+  background: linear-gradient(
+    to right,
+    rgba(24, 119, 242, 0.2) 0%,
+    rgba(24, 119, 242, 0.3) 100%
+  ) !important;
+  border-left: 5px solid rgba(24, 119, 242, 0.8) !important;
+  animation: dropZonePulse 1s ease-in-out infinite !important;
+  transform: scaleX(1.05) !important;
+  box-shadow: 
+    inset 5px 0 12px rgba(24, 119, 242, 0.3),
+    0 0 20px rgba(24, 119, 242, 0.4),
+    0 0 0 2px rgba(24, 119, 242, 0.2) !important;
+  z-index: 5 !important;
+  position: relative !important;
+}
+
+body.rbc-addons-dnd-is-dragging .rbc-day-slot:hover {
+  background: linear-gradient(
+    to bottom,
+    rgba(24, 119, 242, 0.18) 0%,
+    rgba(24, 119, 242, 0.25) 100%
+  ) !important;
+  animation: dropZonePulse 1s ease-in-out infinite !important;
+  box-shadow: 
+    inset 0 4px 12px rgba(24, 119, 242, 0.25),
+    0 0 16px rgba(24, 119, 242, 0.3) !important;
+  border-radius: 4px !important;
+  z-index: 5 !important;
+  position: relative !important;
+}
+
+/* Drop preview with shimmer effect */
+.rbc-addons-dnd-drag-preview {
+  opacity: 0.9;
+  border: 2px dashed #1877F2;
+  background: linear-gradient(
+    90deg,
+    rgba(24, 119, 242, 0.1) 0%,
+    rgba(24, 119, 242, 0.15) 50%,
+    rgba(24, 119, 242, 0.1) 100%
+  ) !important;
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+  box-shadow: 0 4px 12px rgba(24, 119, 242, 0.3);
+}
+
+/* Smooth transition when event returns to original position */
+.rbc-event {
+  will-change: transform, opacity, box-shadow;
+}
+
+/* Event Status Indicators - Enhanced visual enhancement */
+.rbc-event::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px 0 0 8px;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.2);
+}
+
+/* Event hover state - Enhanced */
+.rbc-event:hover::before {
+  width: 5px;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+}
+
+
+/* Short events - More compact */
+.rbc-event.rbc-selected {
+  z-index: 5;
+}
+
+/* Better event spacing in month view - Compact, narrow, and readable */
+.rbc-month-view .rbc-event {
+  margin: 1px 2px !important;
+  min-height: 24px !important;
+  max-height: 26px !important;
+  padding: 4px 4px !important;
+  /* Narrower width */
+  width: fit-content !important;
+  max-width: 85% !important;
+  /* Ensure proper vertical centering */
+  align-items: center !important;
+}
+
+.rbc-month-view .rbc-event-content-wrapper {
+  padding: 0 !important;
+  gap: 3px !important;
+  /* Ensure proper alignment */
+  align-items: center !important;
+}
+
+/* Ensure text doesn't get clipped in month view */
+.rbc-month-view .rbc-event-content,
+.rbc-month-view .rbc-event-time {
+  line-height: 1.4 !important;
+  vertical-align: middle !important;
+  display: inline-block !important;
+}
+
+/* Prevent any text clipping */
+.rbc-month-view .rbc-event-content-wrapper {
+  overflow: visible !important;
+}
+
+.rbc-month-view .rbc-event-content {
+  max-width: none !important; /* No need to reserve space for removed dot */
+}
+
+/* Limit to 2 visible events per day in month view */
+.rbc-month-view .rbc-day-slot {
+  position: relative !important;
+}
+
+.rbc-month-view .rbc-day-slot .rbc-events-container {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  /* Height allows exactly 2 readable events (26px each + 2px gap = 54px) */
+  max-height: 54px !important;
+  overflow: hidden !important;
+}
+
+/* Let react-big-calendar handle showing "+X more" automatically */
+
+/* Ensure events don't overflow or clip text */
+.rbc-month-view .rbc-event {
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.rbc-month-view .rbc-event * {
+  box-sizing: border-box !important;
+}
+
+/* Prevent text from breaking or wrapping */
+.rbc-event-content-wrapper,
+.rbc-event-content,
+.rbc-event-time {
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  hyphens: none !important;
+  white-space: nowrap !important;
+}
+
+/* Better contrast for readability */
+.rbc-event {
+  color: #ffffff !important;
+}
+
+.rbc-event-content {
+  color: #ffffff !important;
+}
+
+.rbc-event-time {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Ensure status dots are visible */
+.rbc-event-content-wrapper > div:first-child {
+  flex-shrink: 0 !important;
+  width: auto !important;
+}
+
+/* Show "xn more" indicator */
+.rbc-month-view .rbc-show-more {
+  background: rgba(24, 119, 242, 0.08) !important;
+  border: 1px solid rgba(24, 119, 242, 0.2) !important;
+  border-radius: 4px !important;
+  padding: 2px 6px !important;
+  margin: 1px 2px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: #1877F2 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  text-align: center !important;
+  min-height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.rbc-month-view .rbc-show-more:hover {
+  background: rgba(24, 119, 242, 0.15) !important;
+  border-color: rgba(24, 119, 242, 0.4) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Week/Day view event spacing */
+.rbc-time-view .rbc-event {
+  margin: 1px 3px 3px 3px !important;
+}
+
+/* Ensure events don't get cut off */
+.rbc-event {
+  overflow: visible !important;
+}
+
+.rbc-time-view .rbc-event {
+  overflow: visible !important;
+}
+
+.rbc-month-view .rbc-event {
+  overflow: visible !important;
+}
+
+/* Better event container to prevent clipping */
+.rbc-event-segment {
+  overflow: visible !important;
+}
+
+.rbc-event-label {
+  overflow: visible !important;
+}
+
+/* Improve event rendering in month view */
+.rbc-month-view .rbc-event-content {
+  overflow: visible !important;
+}
+
+
+/* Multiple events in same cell - Better spacing */
+.rbc-event-continues-after,
+.rbc-event-continues-prior {
+  border-radius: 0 !important;
+}
+
+.rbc-event-continues-after {
+  border-top-right-radius: 6px !important;
+  border-bottom-right-radius: 6px !important;
+}
+
+.rbc-event-continues-prior {
+  border-top-left-radius: 6px !important;
+  border-bottom-left-radius: 6px !important;
+}
+
+/* Event overflow indicator - Modern style */
+.rbc-show-more {
+  background: rgba(24, 119, 242, 0.1) !important;
+  color: #1877F2 !important;
+  border: 1px solid rgba(24, 119, 242, 0.2) !important;
+  border-radius: 4px !important;
+  padding: 4px 8px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  margin-top: 4px !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.rbc-show-more:hover {
+  background: rgba(24, 119, 242, 0.15) !important;
+  border-color: rgba(24, 119, 242, 0.3) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(24, 119, 242, 0.2);
+}
+
+/* Prevent layout shift during drag */
+.rbc-addons-dnd-dragging {
+  will-change: transform, opacity, box-shadow;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Additional cursor overrides for all calendar elements during drag */
+body.rbc-addons-dnd-is-dragging .rbc-calendar,
+body.rbc-addons-dnd-is-dragging .rbc-calendar *,
+body.rbc-addons-dnd-is-dragging .rbc-header,
+body.rbc-addons-dnd-is-dragging .rbc-toolbar,
+body.rbc-addons-dnd-is-dragging .rbc-time-header,
+body.rbc-addons-dnd-is-dragging .rbc-time-content,
+body.rbc-addons-dnd-is-dragging .rbc-time-view,
+body.rbc-addons-dnd-is-dragging .rbc-month-view,
+body.rbc-addons-dnd-is-dragging .rbc-agenda-view {
+  cursor: grabbing !important;
+  cursor: -webkit-grabbing !important;
+}
+
+/* Tooltip styles matching Meta Business Manager design */
+[data-radix-tooltip-content] {
+  background-color: #1f2937 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* Ensure tooltips don't interfere with drag cursor */
+body.rbc-addons-dnd-is-dragging [data-radix-tooltip-content] {
+  display: none !important;
+}
+
+/* Additional Calendar Polish */
+.rbc-month-view {
+  background: #ffffff;
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+}
+
+.rbc-time-view {
+  background: #ffffff;
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+}
+
+/* Better spacing for month view cells */
+.rbc-month-view .rbc-day-bg {
+  min-height: 120px;
+  padding: 4px !important;
+}
+
+/* Improve cell content alignment */
+.rbc-day-slot {
+  min-height: 60px;
+}
+
+/* Better visual separation between weeks */
+.rbc-month-row + .rbc-month-row {
+  border-top: 2px solid #f3f4f6 !important;
+}
+
+/* Enhanced calendar container */
+.rbc-calendar {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Improve event text rendering */
+.rbc-event-content,
+.rbc-event-label {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Calendar cell hover enhancement */
+.rbc-day-bg:hover {
+  background-color: rgba(249, 250, 251, 0.6) !important;
+  transition: background-color 0.2s ease !important;
+}
+
+/* Today's date cell - More prominent */
+.rbc-today {
+  background-color: rgba(24, 119, 242, 0.05) !important;
+}
+
+.rbc-today .rbc-day-bg {
+  background-color: rgba(24, 119, 242, 0.08) !important;
+  border: 2px solid rgba(24, 119, 242, 0.25) !important;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(24, 119, 242, 0.1);
+}
+
+.rbc-today .rbc-date-cell {
+  font-weight: 700 !important;
+  color: #1877F2 !important;
+}
+
+/* Selected date range */
+.rbc-selected {
+  background-color: rgba(24, 119, 242, 0.1) !important;
+}
+
+/* Time slot styling */
+.rbc-time-slot {
+  min-height: 40px;
+}
+
+.rbc-time-slot .rbc-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  padding: 4px 8px;
+}
+
+/* Agenda view improvements */
+.rbc-agenda-view table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.rbc-agenda-view .rbc-agenda-date-cell,
+.rbc-agenda-view .rbc-agenda-time-cell {
+  padding: 12px 16px;
+  font-weight: 500;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.rbc-agenda-view .rbc-agenda-event-cell {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Week view improvements */
+.rbc-time-header {
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.rbc-time-header-content {
+  border-left: 1px solid #e5e7eb;
+  font-weight: 600;
+  font-size: 12px;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Day view improvements */
+.rbc-day-view .rbc-time-slot {
+  border-top: 1px solid #f3f4f6;
+}
+
+.rbc-day-view .rbc-time-content {
+  border-top: 2px solid #e5e7eb;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .rbc-toolbar {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .rbc-toolbar-label {
+    font-size: 16px !important;
+  }
+  
+  .rbc-event {
+    font-size: 11px !important;
+    padding: 4px 6px !important;
+  }
+}

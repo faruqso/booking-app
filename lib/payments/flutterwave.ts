@@ -80,9 +80,11 @@ export async function createFlutterwavePayment(
     };
   } catch (error: any) {
     console.error("Flutterwave payment creation error:", error);
+    // Extract more detailed error message
+    const errorMessage = error.message || error.data?.message || "Failed to create payment";
     return {
       success: false,
-      error: error.message || "Failed to create payment",
+      error: errorMessage,
     };
   }
 }

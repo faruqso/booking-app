@@ -54,7 +54,8 @@ export default function DashboardPage() {
     } else if (status === "authenticated") {
       fetchBookings();
     }
-  }, [status, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]); // Removed router dependency to avoid unnecessary re-renders
 
   useEffect(() => {
     if (businessId && typeof window !== "undefined") {

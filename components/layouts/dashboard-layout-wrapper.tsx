@@ -9,7 +9,9 @@ export function DashboardLayoutWrapper({
 }) {
   return (
     <div className="flex h-screen overflow-hidden">
-      <DashboardSidebar />
+      <div className="flex-shrink-0 sticky top-0 self-start h-screen">
+        <DashboardSidebar />
+      </div>
       <main className="flex-1 overflow-y-auto">
         <div className="container mx-auto max-w-7xl p-6 lg:p-8">
           {children}

@@ -9,6 +9,39 @@ import { detectConflictWithAlternatives, formatAlternativeSlots } from "@/lib/ai
 
 export const dynamic = 'force-dynamic';
 
+// Helper function to validate payment configuration
+async function validatePaymentConfiguration(
+  provider: string | null,
+  businessId: string
+): Promise<boolean> {
+  if (!provider) return false;
+
+  const business = await prisma.business.findUnique({
+    where: { id: businessId },
+    select: {
+      stripePublishableKey: true,
+      stripeSecretKey: true,
+      paystackPublicKey: true,
+      paystackSecretKey: true,
+      flutterwavePublicKey: true,
+      flutterwaveSecretKey: true,
+    },
+  });
+
+  if (!business) return false;
+
+  switch (provider) {
+    case "stripe":
+      return !!(business.stripePublishableKey && business.stripeSecretKey);
+    case "paystack":
+      return !!(business.paystackPublicKey && business.paystackSecretKey);
+    case "flutterwave":
+      return !!(business.flutterwavePublicKey && business.flutterwaveSecretKey);
+    default:
+      return false;
+  }
+}
+
 const bookingSchema = z.object({
   businessId: z.string(),
   serviceId: z.string(),
@@ -28,8 +61,36 @@ export async function POST(request: Request) {
     // Verify business and service exist
     const business = await prisma.business.findUnique({
       where: { id: validatedData.businessId },
-      include: {
-        availability: true,
+      select: {
+        id: true,
+        businessName: true,
+        minimumAdvanceBookingHours: true,
+        requirePaymentDeposit: true,
+        depositPercentage: true,
+        paymentProvider: true,
+        currency: true,
+        availability: {
+          select: {
+            id: true,
+            monday: true,
+            tuesday: true,
+            wednesday: true,
+            thursday: true,
+            friday: true,
+            saturday: true,
+            sunday: true,
+          },
+        },
+        logoUrl: true,
+        primaryColor: true,
+        twilioAccountSid: true,
+        twilioAuthToken: true,
+        twilioPhoneNumber: true,
+        whatsappPhoneNumber: true,
+        whatsappAccessToken: true,
+        whatsappPhoneNumberId: true,
+        whatsappBusinessAccountId: true,
+        whatsappNotificationsEnabled: true,
       },
     });
 
@@ -182,7 +243,40 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create booking
+    // Calculate payment amount if required
+    const servicePrice = Number(service.price);
+    let paymentAmount: number | null = null;
+    let requiresPayment = false;
+
+    if (business.requirePaymentDeposit && business.paymentProvider) {
+      // Validate that payment provider has required keys configured
+      // This check ensures payment can actually be processed
+      const hasValidPaymentConfig = await validatePaymentConfiguration(
+        business.paymentProvider,
+        business.id
+      );
+
+      if (!hasValidPaymentConfig) {
+        return NextResponse.json(
+          {
+            error: "Payment is required but payment provider is not fully configured. Please configure your payment provider in the dashboard.",
+            paymentConfigError: true,
+          },
+          { status: 400 }
+        );
+      }
+
+      requiresPayment = true;
+      if (business.depositPercentage && business.depositPercentage > 0) {
+        // Calculate deposit amount
+        paymentAmount = (servicePrice * business.depositPercentage) / 100;
+      } else {
+        // Full payment required
+        paymentAmount = servicePrice;
+      }
+    }
+
+    // Create booking with payment status
     const booking = await prisma.booking.create({
       data: {
         businessId: validatedData.businessId,
@@ -195,10 +289,27 @@ export async function POST(request: Request) {
         endTime,
         notes: validatedData.notes,
         status: "PENDING",
+        paymentStatus: requiresPayment ? "PENDING" : "COMPLETED", // No payment needed = completed
+        paymentProvider: requiresPayment ? business.paymentProvider : null,
+        amountPaid: requiresPayment ? null : servicePrice, // Set amountPaid if no payment required
       },
       include: {
-        service: true,
-        business: true,
+        service: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            duration: true,
+          },
+        },
+        business: {
+          select: {
+            id: true,
+            businessName: true,
+            logoUrl: true,
+            primaryColor: true,
+          },
+        },
         location: {
           select: {
             id: true,
@@ -279,7 +390,15 @@ export async function POST(request: Request) {
       // Don't fail the booking creation if WhatsApp fails
     }
 
-    return NextResponse.json(booking, { status: 201 });
+    // Return booking with payment information
+    return NextResponse.json({
+      ...booking,
+      requiresPayment,
+      paymentAmount: paymentAmount ? Number(paymentAmount.toFixed(2)) : null,
+      isDeposit: requiresPayment && business.depositPercentage && business.depositPercentage > 0 && business.depositPercentage < 100,
+      depositPercentage: business.depositPercentage,
+      currency: business.currency || "USD",
+    }, { status: 201 });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -290,7 +409,10 @@ export async function POST(request: Request) {
 
     console.error("Booking creation error:", error);
     return NextResponse.json(
-      { error: "Failed to create booking" },
+      { 
+        error: error.message || "Failed to create booking",
+        details: process.env.NODE_ENV === "development" ? error.stack : undefined
+      },
       { status: 500 }
     );
   }
@@ -332,12 +454,39 @@ export async function GET(request: Request) {
 
     const bookings = await prisma.booking.findMany({
       where,
-      include: {
-        service: true,
+      select: {
+        id: true,
+        customerName: true,
+        customerEmail: true,
+        customerPhone: true,
+        startTime: true,
+        endTime: true,
+        status: true,
+        paymentStatus: true,
+        amountPaid: true,
+        notes: true,
+        createdAt: true,
+        updatedAt: true,
+        serviceId: true,
+        service: {
+          select: {
+            id: true,
+            name: true,
+            duration: true,
+            price: true,
+          },
+        },
+        location: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
       orderBy: {
-        startTime: "asc",
+        startTime: "desc", // Most recent first
       },
+      take: 100, // Limit to 100 bookings to improve performance
     });
 
     return NextResponse.json(bookings);

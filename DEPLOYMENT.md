@@ -91,8 +91,13 @@ This guide walks you through deploying the Booking App to production using free-
    - In Vercel project settings, go to "Environment Variables"
    - Add each variable for **Production**, **Preview**, and **Development**:
    
+   **⚠️ CRITICAL: Database Separation**
+   - **Production**: Use your PRODUCTION Neon database connection string
+   - **Preview/Development**: Use a SEPARATE development database (create another Neon project)
+   - **NEVER** use the same database for local dev and production!
+   
    **Required Variables:**
-   - `DATABASE_URL` - Your Neon connection string from Step 1
+   - `DATABASE_URL` - Your Neon connection string (DIFFERENT for each environment!)
    - `NEXTAUTH_URL` - Will be `https://your-project.vercel.app` (update after first deploy)
    - `NEXTAUTH_SECRET` - Generate with: `openssl rand -base64 32` or use `./scripts/generate-secret.sh`
    - `RESEND_API_KEY` - From Resend dashboard (Step 4)

@@ -8,16 +8,31 @@ export const dynamic = 'force-dynamic';
 
 const brandingSchema = z.object({
   businessName: z.string().min(1, "Business name is required"),
-  primaryColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format"),
+  primaryColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format. Use hex format like #3b82f6"),
   logoUrl: z.string().optional(),
-  // Phase 2 Enhanced Branding
-  secondaryColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format").optional(),
-  accentColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format").optional(),
-  backgroundColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format").optional(),
-  textColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format").optional(),
+  // Phase 2 Enhanced Branding - Allow empty strings or valid hex colors
+  secondaryColor: z.union([
+    z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format. Use hex format like #3b82f6"),
+    z.literal("")
+  ]).optional(),
+  accentColor: z.union([
+    z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format. Use hex format like #3b82f6"),
+    z.literal("")
+  ]).optional(),
+  backgroundColor: z.union([
+    z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format. Use hex format like #3b82f6"),
+    z.literal("")
+  ]).optional(),
+  textColor: z.union([
+    z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format. Use hex format like #3b82f6"),
+    z.literal("")
+  ]).optional(),
   fontFamily: z.string().optional(),
   faviconUrl: z.string().optional(),
-  subdomain: z.string().min(3, "Subdomain must be at least 3 characters").max(63, "Subdomain too long").regex(/^[a-z0-9-]+$/, "Subdomain can only contain lowercase letters, numbers, and hyphens").optional(),
+  subdomain: z.union([
+    z.string().min(3, "Subdomain must be at least 3 characters").max(63, "Subdomain too long").regex(/^[a-z0-9-]+$/, "Subdomain can only contain lowercase letters, numbers, and hyphens"),
+    z.literal("")
+  ]).optional(),
 });
 
 export async function PUT(request: Request) {

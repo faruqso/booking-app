@@ -66,6 +66,7 @@ export const EMAIL_SUBJECT_TEMPLATES = {
   bookingConfirmation: "Booking Confirmed - {{businessName}}",
   bookingReminder: "Reminder: {{serviceName}} on {{date}}",
   bookingCancellation: "Booking Cancelled - {{businessName}}",
+  bookingRescheduling: "Booking Rescheduled - {{businessName}}",
   passwordReset: "Reset Your Password",
   welcome: "Welcome to {{businessName}}!",
 };

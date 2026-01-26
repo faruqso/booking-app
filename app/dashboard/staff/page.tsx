@@ -120,6 +120,33 @@ export default function StaffPage() {
     }
   };
 
+  const resendInvitation = async (staffId: string) => {
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/staff/${staffId}/resend-invitation`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Invitation email has been resent successfully.",
+        });
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to resend invitation");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to resend invitation",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const onSubmit = async (data: StaffFormValues) => {
     setSaving(true);
     try {
@@ -138,8 +165,52 @@ export default function StaffPage() {
           description: "Staff member invited successfully. They will receive an email to set their password.",
         });
       } else {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to invite staff");
+        const errorData = await response.json();
+        const errorCode = errorData.code;
+        const canResend = errorData.canResend;
+        
+        // Handle different error cases with helpful messages
+        let errorMessage = errorData.error || "Failed to invite staff";
+        let tipMessage = null;
+
+        if (errorCode === "ALREADY_STAFF") {
+          if (canResend) {
+            // Find the pending staff member to offer resend
+            const pendingStaff = staff.find(
+              (s) => s.email.toLowerCase() === data.email.toLowerCase() && !s.emailVerified
+            );
+            if (pendingStaff) {
+              errorMessage = "An invitation has already been sent to this email.";
+              tipMessage = "You can resend the invitation from the staff list using the 'Resend' button.";
+            }
+          } else {
+            errorMessage = "This person is already a verified staff member of your business.";
+          }
+        } else if (errorCode === "STAFF_OTHER_BUSINESS") {
+          errorMessage = "This email is already associated with another business as a staff member.";
+        } else if (errorCode === "BUSINESS_OWNER") {
+          errorMessage = "This email is already registered as a business owner.";
+        }
+
+        // Show error toast first (will appear on top)
+        toast({
+          title: "Cannot Send Invitation",
+          description: errorMessage,
+          variant: "destructive",
+          duration: 5000,
+        });
+
+        // Show tip second (will appear below error)
+        if (tipMessage) {
+          // Small delay to ensure proper stacking - tip appears below error
+          setTimeout(() => {
+            toast({
+              title: "Tip",
+              description: tipMessage,
+              duration: 5000,
+            });
+          }, 100);
+        }
       }
     } catch (error: any) {
       toast({
@@ -332,6 +403,18 @@ export default function StaffPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          {!staffMember.emailVerified && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => resendInvitation(staffMember.id)}
+                              disabled={saving}
+                              title="Resend invitation email"
+                            >
+                              <Mail className="h-4 w-4 mr-1" />
+                              Resend
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -368,7 +451,7 @@ export default function StaffPage() {
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
               <FormField
                 control={form.control}
                 name="name"
@@ -429,7 +512,7 @@ export default function StaffPage() {
             </DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4 pt-4">
               <FormField
                 control={editForm.control}
                 name="name"

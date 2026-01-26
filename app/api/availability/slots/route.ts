@@ -101,6 +101,10 @@ export async function GET(request: Request) {
         startTime: true,
         endTime: true,
       },
+      // Add index hint for better performance
+      orderBy: {
+        startTime: 'asc',
+      },
     });
 
     // Generate time slots with buffer time

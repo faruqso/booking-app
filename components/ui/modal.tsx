@@ -50,15 +50,15 @@ export function Modal({
       <DialogContent
         className={cn(
           sizeClasses[size],
-          "max-h-[90vh] flex flex-col p-0 overflow-hidden",
+          "max-h-[90vh] flex flex-col p-0 overflow-hidden bg-white",
           className
         )}
       >
-        <DialogHeader className="sticky top-0 z-10 bg-background border-b px-6 py-4 space-y-0 m-0">
+        <DialogHeader className="sticky top-0 z-10 bg-white px-6 pt-6 pb-4 space-y-0 m-0">
           <div className={cn(showCloseButton && "pr-8")}>
-            <DialogTitle className="text-lg leading-tight m-0">{title}</DialogTitle>
+            <DialogTitle className="text-xl font-bold leading-tight m-0 text-gray-900">{title}</DialogTitle>
             {description && (
-              <DialogDescription className="mt-1.5 text-sm m-0">
+              <DialogDescription className="mt-2 text-sm m-0 text-gray-600">
                 {description}
               </DialogDescription>
             )}
@@ -68,7 +68,7 @@ export function Modal({
           <div className="py-6">{children}</div>
         </div>
         {footer && (
-          <div className="sticky bottom-0 z-10 bg-background border-t px-6 py-4">
+          <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 px-6 py-5">
             {footer}
           </div>
         )}
@@ -84,7 +84,7 @@ interface ModalFooterProps {
 
 export function ModalFooter({ children, className }: ModalFooterProps) {
   return (
-    <div className={cn("flex justify-end gap-3", className)}>{children}</div>
+    <div className={cn("flex items-center gap-2.5 flex-wrap", className)}>{children}</div>
   );
 }
 
