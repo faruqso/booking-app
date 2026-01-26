@@ -5,12 +5,6 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = 'force-dynamic';
 
-interface DayHours {
-  open: string;
-  close: string;
-  isOpen: boolean;
-}
-
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
