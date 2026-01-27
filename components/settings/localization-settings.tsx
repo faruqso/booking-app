@@ -87,14 +87,6 @@ export default function LocalizationSettings() {
     fetchLocalization();
   }, []);
 
-  // Auto-detect on mount if enabled
-  useEffect(() => {
-    if (autoDetectEnabled && !loading) {
-      handleAutoDetect();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoDetectEnabled, loading]);
-
   const fetchLocalization = async () => {
     try {
       setLoading(true);
@@ -119,7 +111,7 @@ export default function LocalizationSettings() {
     }
   };
 
-  const handleAutoDetect = () => {
+  const handleAutoDetect = (showToast = true) => {
     try {
       const detectedDateFormat = detectDateFormat();
       const detectedTimeFormat = detectTimeFormat();
@@ -129,17 +121,21 @@ export default function LocalizationSettings() {
       form.setValue("timeFormat", detectedTimeFormat);
       form.setValue("timezone", detectedTimezone);
       
-      toast({
-        title: "Settings Detected",
-        description: `Detected date format: ${detectedDateFormat}, time format: ${detectedTimeFormat}, timezone: ${detectedTimezone}`,
-      });
+      if (showToast) {
+        toast({
+          title: "Settings Detected",
+          description: `Detected date format: ${detectedDateFormat}, time format: ${detectedTimeFormat}, timezone: ${detectedTimezone}`,
+        });
+      }
     } catch (error) {
       console.error("Failed to auto-detect settings:", error);
-      toast({
-        title: "Detection Failed",
-        description: "Could not detect system settings. Please select manually.",
-        variant: "destructive",
-      });
+      if (showToast) {
+        toast({
+          title: "Detection Failed",
+          description: "Could not detect system settings. Please select manually.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -204,40 +200,44 @@ export default function LocalizationSettings() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Auto-detect Option */}
-            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
-              <div className="flex items-center gap-3">
-                <Checkbox
-                  id="auto-detect"
-                  checked={autoDetectEnabled}
-                  onCheckedChange={(checked) => {
-                    setAutoDetectEnabled(checked as boolean);
-                    if (checked) {
-                      handleAutoDetect();
-                    }
-                  }}
-                />
-                <Label
-                  htmlFor="auto-detect"
-                  className="text-sm font-medium cursor-pointer flex items-center gap-2"
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="auto-detect"
+                    checked={autoDetectEnabled}
+                    onCheckedChange={(checked) => {
+                      setAutoDetectEnabled(checked as boolean);
+                      if (checked) {
+                        handleAutoDetect(true);
+                      }
+                    }}
+                  />
+                  <Label
+                    htmlFor="auto-detect"
+                    className="text-sm font-medium cursor-pointer flex items-center gap-2"
+                  >
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    Automatically detect from system settings
+                  </Label>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAutoDetect(true)}
+                  className="gap-2"
                 >
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  Automatically detect from system settings
-                </Label>
+                  <Sparkles className="h-4 w-4" />
+                  Detect Now
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAutoDetect}
-                className="gap-2"
-              >
-                <Sparkles className="h-4 w-4" />
-                Detect Now
-              </Button>
+              <p className="text-xs text-muted-foreground px-1">
+                {autoDetectEnabled 
+                  ? "Auto-detection is enabled. Settings will be automatically detected from your browser/system preferences."
+                  : "Enable auto-detection to automatically set date format, time format, and timezone from your system settings. You can also click 'Detect Now' to detect once."}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground -mt-4">
-              When enabled, date format, time format, and timezone will be automatically detected from your browser/system settings.
-            </p>
 
             <Separator />
 
