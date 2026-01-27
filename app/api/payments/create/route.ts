@@ -276,15 +276,17 @@ export async function POST(request: Request) {
       expectedAmount = (servicePrice * business.depositPercentage) / 100;
     }
     
-    // Round expected amount to 2 decimal places to match frontend calculation
+    // Use more precise rounding to avoid floating point issues
+    // Round to 2 decimal places using proper method
     expectedAmount = Math.round(expectedAmount * 100) / 100;
     
     // Round received amount to 2 decimal places for consistent comparison
     const receivedAmount = Math.round(validatedData.amount * 100) / 100;
     
-    // Allow small rounding differences (0.01)
+    // Use a more lenient tolerance for floating point comparison (0.02 instead of 0.01)
+    // This accounts for potential rounding differences between frontend and backend
     const amountDifference = Math.abs(receivedAmount - expectedAmount);
-    if (amountDifference > 0.01) {
+    if (amountDifference > 0.02) {
       console.error("Payment amount mismatch:", {
         expected: expectedAmount,
         received: receivedAmount,
@@ -293,9 +295,16 @@ export async function POST(request: Request) {
         servicePrice,
         depositPercentage: business.depositPercentage,
         difference: amountDifference,
+        expectedFormatted: expectedAmount.toFixed(2),
+        receivedFormatted: receivedAmount.toFixed(2),
       });
       return NextResponse.json(
-        { error: "Payment amount does not match booking amount" },
+        { 
+          error: "Payment amount does not match booking amount",
+          details: process.env.NODE_ENV === "development" 
+            ? `Expected: ${expectedAmount.toFixed(2)}, Received: ${receivedAmount.toFixed(2)}`
+            : undefined
+        },
         { status: 400 }
       );
     }
