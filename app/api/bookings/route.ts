@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { parseISO, addMinutes, isBefore, startOfDay } from "date-fns";
-import { getAvailabilityForDate, generateTimeSlots } from "@/lib/availability";
+import { getAvailabilityForDate } from "@/lib/availability";
 import { detectConflictWithAlternatives, formatAlternativeSlots } from "@/lib/ai/conflict-detection";
 
 export const dynamic = 'force-dynamic';
