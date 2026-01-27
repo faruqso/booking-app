@@ -2,9 +2,9 @@ name: CI Build Check
 
 on:
   pull_request:
-    branches: [main, phase-2-mvp]
+    branches: [main, phase-2-mvp, phase-3]
   push:
-    branches: [main, phase-2-mvp]
+    branches: [main, phase-2-mvp, phase-3]
 
 jobs:
   build:

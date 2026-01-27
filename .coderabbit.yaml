@@ -1,0 +1,257 @@
+# CodeRabbit Configuration
+# Documentation: https://docs.coderabbit.ai/configure-coderabbit
+
+# Language settings
+language:
+  - typescript
+  - javascript
+  - json
+  - yaml
+  - markdown
+
+# Paths to include/exclude
+paths:
+  include:
+    - "app/**"
+    - "components/**"
+    - "lib/**"
+    - "hooks/**"
+    - "prisma/**"
+    - "types/**"
+    - "*.{ts,tsx,js,jsx,json,yaml,yml}"
+  exclude:
+    - "node_modules/**"
+    - ".next/**"
+    - ".vercel/**"
+    - "dist/**"
+    - "build/**"
+    - "*.min.js"
+    - "*.min.css"
+    - ".git/**"
+    - ".husky/**"
+    - "coverage/**"
+    - "*.log"
+
+# Review settings
+review:
+  # Request review from CodeRabbit on pull requests
+  request_review: true
+  
+  # Review threshold - minimum lines changed to trigger review
+  review_threshold: 10
+  
+  # Review only changed files
+  review_only_changed_files: false
+  
+  # High-level summary of changes
+  high_level_summary: true
+  
+  # Detailed analysis
+  detailed_analysis: true
+  
+  # Focus areas for reviews
+  focus:
+    - security
+    - performance
+    - best_practices
+    - code_quality
+    - maintainability
+    - type_safety
+    - error_handling
+    - accessibility
+
+# Chat settings
+chat:
+  # Enable chat with CodeRabbit
+  enabled: true
+  
+  # Allow suggestions for improvements
+  suggestions: true
+
+# Rules and guidelines
+rules:
+  # Security rules
+  security:
+    - check_for_sql_injection
+    - check_for_xss_vulnerabilities
+    - check_for_secret_exposure
+    - check_for_authentication_issues
+    - check_for_authorization_issues
+    - check_for_rate_limiting
+    - check_for_csrf_protection
+  
+  # Performance rules
+  performance:
+    - check_for_n_plus_one_queries
+    - check_for_unnecessary_re_renders
+    - check_for_large_bundle_sizes
+    - check_for_memory_leaks
+    - check_for_inefficient_algorithms
+  
+  # Code quality rules
+  code_quality:
+    - check_for_code_duplication
+    - check_for_complex_functions
+    - check_for_long_files
+    - check_for_unused_code
+    - check_for_bad_practices
+    - check_for_type_safety_issues
+
+# File-specific rules
+files:
+  # API routes
+  "app/api/**/*.ts":
+    focus:
+      - security
+      - error_handling
+      - input_validation
+      - rate_limiting
+      - database_queries
+  
+  # Database schema
+  "prisma/schema.prisma":
+    focus:
+      - database_design
+      - relationships
+      - indexes
+      - migrations
+  
+  # Components
+  "components/**/*.{tsx,ts}":
+    focus:
+      - accessibility
+      - performance
+      - reusability
+      - prop_types
+      - hooks_usage
+  
+  # Payment-related files
+  "app/api/payments/**/*.ts":
+    focus:
+      - security
+      - payment_processing
+      - error_handling
+      - validation
+      - webhook_security
+  
+  # Authentication files
+  "app/api/auth/**/*.ts":
+    focus:
+      - security
+      - authentication
+      - authorization
+      - session_management
+
+# Ignore patterns for specific checks
+ignore:
+  # Ignore formatting issues (handled by ESLint/Prettier)
+  formatting: true
+  
+  # Ignore test files for certain checks
+  test_files:
+    - "**/*.test.{ts,tsx,js,jsx}"
+    - "**/*.spec.{ts,tsx,js,jsx}"
+    - "**/__tests__/**"
+
+# Suggestions
+suggestions:
+  # Suggest improvements
+  enabled: true
+  
+  # Suggest refactoring opportunities
+  refactoring: true
+  
+  # Suggest performance optimizations
+  performance: true
+  
+  # Suggest security improvements
+  security: true
+  
+  # Suggest documentation improvements
+  documentation: true
+
+# Auto-fix settings (if CodeRabbit supports it)
+auto_fix:
+  # Auto-fix minor issues
+  enabled: false  # Set to true if you want CodeRabbit to auto-fix issues
+  
+  # Types of fixes to auto-apply
+  types:
+    - formatting
+    - simple_refactoring
+    - unused_imports
+
+# PR description enhancement
+pr_description:
+  # Enhance PR descriptions with AI-generated summaries
+  enabled: true
+  
+  # Include code changes summary
+  include_code_summary: true
+  
+  # Include testing recommendations
+  include_testing_recommendations: true
+
+# Commit message suggestions
+commit_message:
+  # Suggest better commit messages
+  enabled: true
+
+# Language-specific settings
+typescript:
+  # Check for TypeScript best practices
+  strict_mode: true
+  
+  # Check for proper type usage
+  type_safety: true
+  
+  # Check for unused types/interfaces
+  unused_types: true
+
+react:
+  # Check for React best practices
+  hooks_rules: true
+  
+  # Check for prop types
+  prop_types: true
+  
+  # Check for accessibility
+  accessibility: true
+  
+  # Check for performance issues
+  performance: true
+
+nextjs:
+  # Next.js specific checks
+  server_components: true
+  
+  # Check for proper API route structure
+  api_routes: true
+  
+  # Check for proper middleware usage
+  middleware: true
+
+# Database-specific settings
+prisma:
+  # Check for database best practices
+  best_practices: true
+  
+  # Check for query optimization
+  query_optimization: true
+  
+  # Check for migration safety
+  migration_safety: true
+
+# Payment processing specific settings
+payments:
+  # Check for payment security
+  security: true
+  
+  # Check for proper error handling
+  error_handling: true
+  
+  # Check for webhook validation
+  webhook_validation: true
+  
+  # Check for amount validation
+  amount_validation: true
