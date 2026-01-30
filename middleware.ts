@@ -1,4 +1,5 @@
 import { withAuth } from "next-auth/middleware";
+import type { NextRequestWithAuth } from "next-auth/middleware";
 import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
 
 const withAuthMiddleware = withAuth(
@@ -30,7 +31,7 @@ const withAuthMiddleware = withAuth(
 
 export default function middleware(req: NextRequest, event: NextFetchEvent) {
   try {
-    return withAuthMiddleware(req, event);
+    return withAuthMiddleware(req as NextRequestWithAuth, event);
   } catch {
     const signInUrl = new URL("/auth/signin", req.url);
     signInUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
