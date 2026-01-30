@@ -40,16 +40,24 @@ function SignInContent() {
     e.preventDefault();
     setLoading(true);
 
+    const timeoutMs = 25000; // 25s – avoid stuck "Signing in..." (e.g. cold DB)
+    const timeoutPromise = new Promise<null>((_, reject) =>
+      setTimeout(() => reject(new Error("Sign-in is taking too long. The server may be waking up—please try again.")), timeoutMs)
+    );
+
     try {
       // Normalize email: trim and lowercase (mobile keyboards often add spaces)
       const normalizedEmail = formData.email.trim().toLowerCase();
       const trimmedPassword = formData.password.trim();
 
-      const result = await signIn("credentials", {
-        email: normalizedEmail,
-        password: trimmedPassword,
-        redirect: false,
-      });
+      const result = await Promise.race([
+        signIn("credentials", {
+          email: normalizedEmail,
+          password: trimmedPassword,
+          redirect: false,
+        }),
+        timeoutPromise,
+      ]);
 
       if (result?.error) {
         let errorMessage = "Unable to sign in. Please try again.";
@@ -93,18 +101,28 @@ function SignInContent() {
           duration: 5000,
         });
         setLoading(false);
+      } else if (result?.url) {
+        // NextAuth returned a redirect URL (e.g. after success with redirect: true)
+        window.location.href = result.url;
       } else {
-        // Navigate to dashboard; keep "Signing in..." until the new page appears
-        const redirectTo = callbackUrl || "/dashboard";
+        // Navigate to dashboard; use pathname only so client router works
+        let redirectTo = callbackUrl || "/dashboard";
+        try {
+          if (redirectTo.startsWith("http")) {
+            const u = new URL(redirectTo);
+            redirectTo = u.pathname + u.search;
+          }
+        } catch {
+          redirectTo = "/dashboard";
+        }
         await router.push(redirectTo);
         router.refresh();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Please try again. If the problem persists, contact support.";
       toast({
-        title: "An unexpected error occurred.",
-        description: err?.message
-          ? err.message
-          : "Please try again. If the problem persists, contact support.",
+        title: "Sign-in issue",
+        description: message,
         variant: "destructive",
         duration: 5000,
       });
