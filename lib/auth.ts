@@ -14,6 +14,7 @@ class DatabaseError extends Error {
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
+  trustHost: true, // Required for Vercel/preview URLs so cookies and redirects use the request host
   providers: [
     CredentialsProvider({
       name: "Credentials",

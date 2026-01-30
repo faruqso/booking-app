@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,6 @@ import { Loader2, LogIn, Mail, Lock, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 function SignInContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -105,18 +104,17 @@ function SignInContent() {
         // NextAuth returned a redirect URL (e.g. after success with redirect: true)
         window.location.href = result.url;
       } else {
-        // Navigate to dashboard; use pathname only so client router works
-        let redirectTo = callbackUrl || "/dashboard";
+        // Full page redirect so the session cookie is sent on the next request (avoids middleware sending user back to sign-in)
+        let path = callbackUrl || "/dashboard";
         try {
-          if (redirectTo.startsWith("http")) {
-            const u = new URL(redirectTo);
-            redirectTo = u.pathname + u.search;
+          if (path.startsWith("http")) {
+            const u = new URL(path);
+            path = u.pathname + u.search;
           }
         } catch {
-          redirectTo = "/dashboard";
+          path = "/dashboard";
         }
-        await router.push(redirectTo);
-        router.refresh();
+        window.location.href = path;
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Please try again. If the problem persists, contact support.";
