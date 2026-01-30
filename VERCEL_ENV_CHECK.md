@@ -68,6 +68,53 @@ Go to your Vercel project settings → Environment Variables and ensure these ar
 - **"Database error"**: DATABASE_URL incorrect or connection issue
 - **"Access denied"**: Session/cookie issues (check secure cookie settings)
 
+## Phase-3 / Preview Branch (HTTP 405 on sign-in) – automated
+
+For **preview** deployments (e.g. `phase-3`), you can set env vars **automatically** with a script (one-time token setup required).
+
+### One-time: create a Vercel token
+
+1. Go to **https://vercel.com/account/tokens**
+2. Click **Create** and name the token (e.g. `booking-app-setup`)
+3. Copy the token (you won’t see it again)
+
+### Run the automated setup
+
+**Option A – token in environment (recommended for one-off run)**
+
+```bash
+VERCEL_TOKEN=your_token_here npm run vercel:setup-preview-env
+```
+
+**Option B – token in `.env.local` (don’t commit this file)**
+
+1. In the project root, create or edit `.env.local`
+2. Add a line: `VERCEL_TOKEN=your_token_here`
+3. Run:
+
+```bash
+npm run vercel:setup-preview-env
+```
+
+The script will:
+
+- Ensure **NEXTAUTH_SECRET** exists for the **Preview** environment (generates one if missing)
+- Optionally set **NEXTAUTH_URL** for Preview if you set `PREVIEW_BASE_URL` (e.g. your phase-3 URL)
+
+**Optional env for the script**
+
+- `VERCEL_PROJECT_NAME` – default `booking-app`
+- `VERCEL_TEAM_ID` – required if the project is under a Vercel team
+- `PREVIEW_BASE_URL` – e.g. `https://booking-app-git-phase-3-xxx.vercel.app` (optional; if unset, the app uses `VERCEL_URL` at runtime)
+
+After running, redeploy the phase-3 (or any preview) deployment for the new env vars to apply.
+
+### Manual alternative
+
+If you prefer to set vars in the dashboard: **Vercel** → Your project → **Settings** → **Environment Variables** → ensure **NEXTAUTH_SECRET** (and optionally **NEXTAUTH_URL**) are set for **Preview**.
+
+The NextAuth route is configured with `runtime = "nodejs"` and `dynamic = "force-dynamic"` so GET/POST to `/api/auth/signin` work on Vercel. If you still see 405, the cause is usually missing or wrong `NEXTAUTH_SECRET` / `NEXTAUTH_URL` for the Preview environment.
+
 ## Debug Mode
 
 The app now has debug mode enabled on Vercel. Check Vercel function logs for detailed error messages.

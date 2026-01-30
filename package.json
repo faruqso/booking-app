@@ -17,6 +17,7 @@
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
     "vercel-build": "npm install --include=dev && prisma generate && prisma db push && next build",
+    "vercel:setup-preview-env": "node scripts/setup-vercel-preview-env.js",
     "prepare": "husky || true"
   },
   "dependencies": {

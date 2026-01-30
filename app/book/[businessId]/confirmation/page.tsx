@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useParams, useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,33 +47,7 @@ export default function ConfirmationPage() {
   const [loading, setLoading] = useState(true);
   const [pollingCount, setPollingCount] = useState(0);
 
-  useEffect(() => {
-    if (bookingId) {
-      fetchBookingDetails();
-    }
-  }, [bookingId]);
-
-  // Poll for payment status updates if payment is PROCESSING
-  useEffect(() => {
-    if (!booking || booking.paymentStatus !== "PROCESSING") {
-      return;
-    }
-
-    // Poll every 3 seconds, max 20 times (1 minute total)
-    const maxPolls = 20;
-    if (pollingCount >= maxPolls) {
-      return;
-    }
-
-    const pollInterval = setInterval(() => {
-      setPollingCount((prev) => prev + 1);
-      fetchBookingDetails();
-    }, 3000);
-
-    return () => clearInterval(pollInterval);
-  }, [booking?.paymentStatus, bookingId, pollingCount]);
-
-  const fetchBookingDetails = async () => {
+  const fetchBookingDetails = useCallback(async () => {
     try {
       // Fetch booking details from API
       const response = await fetch(`/api/bookings/${bookingId}`);
@@ -91,7 +65,32 @@ export default function ConfirmationPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [bookingId]);
+
+  useEffect(() => {
+    if (bookingId) {
+      fetchBookingDetails();
+    }
+  }, [bookingId, fetchBookingDetails]);
+
+  // Poll for payment status updates if payment is PROCESSING
+  useEffect(() => {
+    if (!booking || booking.paymentStatus !== "PROCESSING") {
+      return;
+    }
+
+    const maxPolls = 20;
+    if (pollingCount >= maxPolls) {
+      return;
+    }
+
+    const pollInterval = setInterval(() => {
+      setPollingCount((prev) => prev + 1);
+      fetchBookingDetails();
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [booking, pollingCount, fetchBookingDetails]);
 
   if (loading) {
     return (

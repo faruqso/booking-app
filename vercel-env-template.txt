@@ -23,3 +23,10 @@ NODE_ENV=production
 # 4. Add all variables to Vercel: Project Settings > Environment Variables
 # 5. Apply to: Production, Preview, and Development environments
 
+# Optional - for automated Preview env setup (local .env.local only, do NOT add to Vercel):
+# Create a token at https://vercel.com/account/tokens then run: npm run vercel:setup-preview-env
+# VERCEL_TOKEN=your_vercel_api_token
+# VERCEL_PROJECT_NAME=booking-app
+# VERCEL_TEAM_ID=team_xxx   # only if project is under a team
+# PREVIEW_BASE_URL=https://booking-app-git-phase-3-xxx.vercel.app   # optional
+

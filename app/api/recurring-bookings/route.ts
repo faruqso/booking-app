@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
+import { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
@@ -38,13 +39,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const includeInactive = searchParams.get("includeInactive") === "true";
 
-    const where: any = {
+    const where: Prisma.RecurringBookingWhereInput = {
       businessId: session.user.businessId,
+      ...(includeInactive ? {} : { isActive: true }),
     };
-
-    if (!includeInactive) {
-      where.isActive = true;
-    }
 
     const recurringBookings = await prisma.recurringBooking.findMany({
       where,
@@ -93,8 +91,9 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json(recurringBookings);
-  } catch (error) {
-    console.error("Recurring bookings fetch error:", error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Recurring bookings fetch error:", message);
     return NextResponse.json(
       { error: "Failed to fetch recurring bookings" },
       { status: 500 }
@@ -262,15 +261,15 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(recurringBooking, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.errors[0].message },
         { status: 400 }
       );
     }
-
-    console.error("Recurring booking creation error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Recurring booking creation error:", message);
     return NextResponse.json(
       { error: "Failed to create recurring booking" },
       { status: 500 }

@@ -7,7 +7,7 @@
  * Errors: setError + conflictAlternatives for slot conflicts; displayed in Alert at top of main content.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { format, addDays, startOfDay, parseISO, isToday } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,8 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { PaystackInline } from "@/components/payments/paystack-inline";
 import { useToast } from "@/hooks/use-toast";
 import { BookingServiceStep } from "@/components/booking/booking-service-step";
+import { BookingDateStep } from "@/components/booking/booking-date-step";
+import { BookingTimeStep } from "@/components/booking/booking-time-step";
 
 interface Service {
   id: string;
@@ -109,6 +111,8 @@ export default function BookingPage() {
   const [cancellingBooking, setCancellingBooking] = useState(false);
   const [autoSelecting, setAutoSelecting] = useState(false);
   const [autoSelectEnabled, setAutoSelectEnabled] = useState(false);
+  const [datesWithSlots, setDatesWithSlots] = useState<Set<string> | null>(null);
+  const [loadingDatesWithSlots, setLoadingDatesWithSlots] = useState(false);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -117,15 +121,87 @@ export default function BookingPage() {
     notes: "",
   });
 
+  const fetchBusiness = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/business/${businessId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setBusiness(data);
+      } else {
+        setError("Business not found");
+      }
+    } catch (err) {
+      setError("Failed to load business");
+    } finally {
+      setLoading(false);
+    }
+  }, [businessId]);
+
   useEffect(() => {
     fetchBusiness();
-  }, [businessId]);
+  }, [fetchBusiness]);
+
+  const fetchTimeSlots = useCallback(async () => {
+    if (!selectedService || !selectedDate) return;
+    setLoadingTimeSlots(true);
+    setTimeSlots([]);
+    try {
+      const locationParam = selectedService.locationId ? `&locationId=${selectedService.locationId}` : "";
+      const response = await fetch(
+        `/api/availability/slots?businessId=${businessId}&serviceId=${selectedService.id}&date=${selectedDate.toISOString()}${locationParam}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setTimeSlots(data.slots || []);
+      } else {
+        setTimeSlots([]);
+      }
+    } catch (err) {
+      setTimeSlots([]);
+    } finally {
+      setLoadingTimeSlots(false);
+    }
+  }, [businessId, selectedService, selectedDate]);
 
   useEffect(() => {
     if (selectedService && selectedDate) {
       fetchTimeSlots();
     }
-  }, [selectedService, selectedDate, businessId]);
+  }, [selectedService, selectedDate, fetchTimeSlots]);
+
+  // Fetch which dates have slots as soon as a service is selected (before date step),
+  // so availability is ready when the user lands on date selection — no visible "checking" delay
+  useEffect(() => {
+    if (!selectedService || !businessId) {
+      setDatesWithSlots(null);
+      return;
+    }
+    let cancelled = false;
+    setLoadingDatesWithSlots(true);
+    const today = startOfDay(new Date());
+    const toDate = addDays(today, 29);
+    const locationParam = selectedService.locationId
+      ? `&locationId=${selectedService.locationId}`
+      : "";
+    fetch(
+      `/api/availability/dates-with-slots?businessId=${businessId}&serviceId=${selectedService.id}&from=${today.toISOString()}&to=${toDate.toISOString()}${locationParam}`
+    )
+      .then((res) => (res.ok ? res.json() : { datesWithSlots: [] }))
+      .then((data) => {
+        if (!cancelled && Array.isArray(data.datesWithSlots)) {
+          setDatesWithSlots(new Set(data.datesWithSlots));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setDatesWithSlots(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingDatesWithSlots(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedService, businessId]);
 
   useEffect(() => {
     if (business?.primaryColor) {
@@ -197,49 +273,6 @@ export default function BookingPage() {
         });
     }
   }, [searchParams, business, bookingId]);
-
-  const fetchBusiness = async () => {
-    try {
-      const response = await fetch(`/api/business/${businessId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setBusiness(data);
-      } else {
-        setError("Business not found");
-      }
-    } catch (err) {
-      setError("Failed to load business");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchTimeSlots = async () => {
-    if (!selectedService || !selectedDate) return;
-
-    setLoadingTimeSlots(true);
-    setTimeSlots([]); // Clear previous slots while loading
-
-    try {
-      // Phase 2: Include locationId if service is tied to a specific location
-      const locationParam = selectedService.locationId ? `&locationId=${selectedService.locationId}` : '';
-      const response = await fetch(
-        `/api/availability/slots?businessId=${businessId}&serviceId=${selectedService.id}&date=${selectedDate.toISOString()}${locationParam}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setTimeSlots(data.slots || []);
-      } else {
-        console.error("Failed to fetch time slots:", response.status);
-        setTimeSlots([]);
-      }
-    } catch (err) {
-      console.error("Failed to fetch time slots:", err);
-      setTimeSlots([]);
-    } finally {
-      setLoadingTimeSlots(false);
-    }
-  };
 
   const handleServiceSelect = async (service: Service) => {
     setSelectedService(service);
@@ -774,176 +807,29 @@ export default function BookingPage() {
               )}
 
               {step === "date" && selectedService && (
-                <motion.div
-                  key="date"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Button
-                    variant="ghost"
-                    onClick={() => setStep("service")}
-                    className="mb-6"
-                  >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to services
-                  </Button>
-                  <div className="mb-6">
-                    <div className="flex items-center justify-between mb-3">
-                      <h2 className="text-2xl font-semibold">Select a Date</h2>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleAutoSelectDateAndTime}
-                        disabled={autoSelecting}
-                        className="gap-2"
-                      >
-                        {autoSelecting ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Finding earliest...
-                          </>
-                        ) : (
-                          <>
-                            <Clock className="h-4 w-4" />
-                            Book Earliest Available
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <Checkbox
-                        id="auto-select"
-                        checked={autoSelectEnabled}
-                        onCheckedChange={(checked) => setAutoSelectEnabled(checked as boolean)}
-                      />
-                      <Label
-                        htmlFor="auto-select"
-                        className="text-sm font-normal cursor-pointer"
-                      >
-                        Automatically select earliest available date and time
-                      </Label>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {autoSelectEnabled 
-                        ? "When enabled, the earliest available date and time will be automatically selected when you choose a service."
-                        : "Enable automatic selection to skip manual date/time selection, or choose a specific date below."}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Click a date to see available times for that day.
-                    </p>
-                  </div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2">
-                    Next 30 days
-                  </p>
-                  <div className="grid grid-cols-7 gap-2">
-                    {availableDates.map((date) => {
-                      const isSelected =
-                        selectedDate?.toDateString() === date.toDateString();
-                      const isTodayDate = isToday(date);
-                      return (
-                        <motion.button
-                          key={date.toISOString()}
-                          onClick={() => handleDateSelect(date)}
-                          className={`p-4 rounded-lg border-2 transition-all ${
-                            isSelected
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : isTodayDate
-                                ? "border-primary/50 hover:border-primary/70 bg-card"
-                                : "border-muted hover:border-primary/50 bg-card"
-                          }`}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <div className="text-xs font-medium mb-1">
-                            {format(date, "EEE")}
-                          </div>
-                          <div className="text-lg font-semibold">{format(date, "d")}</div>
-                          <div className="text-xs mt-1">
-                            {isTodayDate ? "Today" : format(date, "MMM")}
-                          </div>
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-                </motion.div>
+                <BookingDateStep
+                  availableDates={availableDates}
+                  selectedDate={selectedDate}
+                  autoSelectEnabled={autoSelectEnabled}
+                  onAutoSelectEnabledChange={setAutoSelectEnabled}
+                  autoSelecting={autoSelecting}
+                  loadingDatesWithSlots={loadingDatesWithSlots}
+                  datesWithSlots={datesWithSlots}
+                  onBack={() => setStep("service")}
+                  onDateSelect={handleDateSelect}
+                  onAutoSelect={handleAutoSelectDateAndTime}
+                />
               )}
 
               {step === "time" && selectedService && selectedDate && (
-                <motion.div
-                  key="time"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Button
-                    variant="ghost"
-                    onClick={() => setStep("date")}
-                    className="mb-6"
-                  >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to date selection
-                  </Button>
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-semibold">
-                      Select a Time for {format(selectedDate, "EEEE, MMMM d")}
-                    </h2>
-                    {timeSlots.length > 0 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (timeSlots[0]) {
-                            handleTimeSelect(timeSlots[0]);
-                          }
-                        }}
-                        className="gap-2"
-                      >
-                        <Clock className="h-4 w-4" />
-                        Select First Available
-                      </Button>
-                    )}
-                  </div>
-                  {loadingTimeSlots ? (
-                    <div className="text-center py-12">
-                      <Loader2 className="h-12 w-12 text-primary mx-auto mb-4 animate-spin" />
-                      <p className="text-muted-foreground">
-                        Loading available time slots...
-                      </p>
-                    </div>
-                  ) : timeSlots.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">
-                        No available time slots for this date.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-4 gap-3 md:grid-cols-6">
-                      {timeSlots.map((slot) => {
-                        const isSelected = selectedTime === slot;
-                        return (
-                          <motion.button
-                            key={slot}
-                            onClick={() => handleTimeSelect(slot)}
-                            className={`p-4 rounded-lg border-2 transition-all font-medium ${
-                              isSelected
-                                ? "border-primary bg-primary text-primary-foreground shadow-lg"
-                                : "border-muted hover:border-primary/50 bg-card"
-                            }`}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            {format(parseISO(slot), "h:mm a")}
-                          </motion.button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </motion.div>
+                <BookingTimeStep
+                  selectedDate={selectedDate}
+                  selectedTime={selectedTime}
+                  timeSlots={timeSlots}
+                  loadingTimeSlots={loadingTimeSlots}
+                  onBack={() => setStep("date")}
+                  onTimeSelect={handleTimeSelect}
+                />
               )}
 
               {step === "details" && selectedService && selectedDate && selectedTime && (

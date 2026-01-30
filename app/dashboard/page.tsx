@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock, CheckCircle2, AlertCircle, TrendingUp, Copy, ExternalLink, Link2, User, Sparkles } from "lucide-react";
+import { Calendar, Clock, CheckCircle2, AlertCircle, TrendingUp, Copy, ExternalLink, Link2, User, Sparkles, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
 import { Modal, ModalFooter, ModalButton } from "@/components/ui/modal";
@@ -45,6 +45,7 @@ export default function DashboardPage() {
   // Hooks must be called before any conditional returns
   const businessId = session?.user?.businessId;
   const [bookingPageUrl, setBookingPageUrl] = useState("");
+  const [urlCopied, setUrlCopied] = useState(false);
 
   useEffect(() => {
     if (status === "loading") {
@@ -228,12 +229,21 @@ export default function DashboardPage() {
     }
   };
 
-  const copyBookingUrl = () => {
-    if (bookingPageUrl) {
-      navigator.clipboard.writeText(bookingPageUrl);
+  const copyBookingUrl = async () => {
+    if (!bookingPageUrl) return;
+    try {
+      await navigator.clipboard.writeText(bookingPageUrl);
+      setUrlCopied(true);
       toast({
         title: "Copied!",
         description: "Booking page URL copied to clipboard",
+      });
+      setTimeout(() => setUrlCopied(false), 2000);
+    } catch {
+      toast({
+        title: "Copy failed",
+        description: "Could not copy to clipboard",
+        variant: "destructive",
       });
     }
   };
@@ -264,24 +274,40 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1 flex items-center gap-2 p-3 bg-background border rounded-lg">
-                <code className="flex-1 text-sm font-mono text-muted-foreground truncate">
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-stretch">
+              <div className="flex-1 flex min-w-0 h-10 bg-background border rounded-lg w-full sm:max-w-xl overflow-hidden">
+                <code className="flex-1 text-sm font-mono text-muted-foreground truncate min-w-0 py-2.5 pl-3 pr-2 flex items-center">
                   {bookingPageUrl}
                 </code>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={copyBookingUrl}
-                  className="shrink-0"
+                  className={`shrink-0 h-full min-w-[72px] px-3 text-xs rounded-none border-l border-t-0 border-b-0 border-r-0 transition-colors ${
+                    urlCopied ? "text-green-600 border-green-300 bg-green-50" : ""
+                  }`}
                 >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copy
+                  {urlCopied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 sm:mr-1.5" />
+                      <span className="hidden sm:inline">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5 sm:mr-1.5" />
+                      <span className="hidden sm:inline">Copy</span>
+                    </>
+                  )}
                 </Button>
               </div>
-              <Button asChild variant="default" className="shrink-0">
-                <Link href={`/book/${businessId}`} target="_blank">
-                  <ExternalLink className="h-4 w-4 mr-2" />
+              <Button
+                asChild
+                variant="default"
+                size="default"
+                className="shrink-0 h-10 px-5 rounded-lg font-medium"
+              >
+                <Link href={`/book/${businessId}`} target="_blank" className="flex items-center justify-center gap-2 h-full">
+                  <ExternalLink className="h-4 w-4" />
                   View Page
                 </Link>
               </Button>

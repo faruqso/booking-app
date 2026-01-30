@@ -112,15 +112,15 @@ export async function PUT(request: Request) {
     });
 
     return NextResponse.json(business);
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.errors[0].message },
         { status: 400 }
       );
     }
-
-    console.error("Branding update error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Branding update error:", message);
     return NextResponse.json(
       { error: "Failed to update branding" },
       { status: 500 }

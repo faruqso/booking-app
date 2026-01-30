@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,21 +20,52 @@ export default function PaymentCallbackPage() {
   const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
   const [message, setMessage] = useState("Verifying your payment...");
 
-  useEffect(() => {
-    if (bookingId && (reference || trxref)) {
-      verifyPayment();
-    } else {
-      // If no reference, check payment status directly
-      if (bookingId && paymentId) {
-        checkPaymentStatus();
-      } else {
-        setStatus("error");
-        setMessage("Missing payment information. Please contact support.");
-      }
+  const checkPaymentStatus = useCallback(async () => {
+    if (!paymentId) {
+      const finalUrl = redirectUrl || `/book/${businessId}/confirmation?bookingId=${bookingId}`;
+      setTimeout(() => router.push(finalUrl), 1500);
+      return;
     }
-  }, [bookingId, reference, trxref, paymentId]);
+    try {
+      let attempts = 0;
+      const maxAttempts = 3;
+      const pollStatus = async () => {
+        attempts++;
+        const response = await fetch(`/api/payments/${paymentId}`);
+        if (response.ok) {
+          const payment = await response.json();
+          if (payment.status === "COMPLETED") {
+            setStatus("success");
+            setMessage("Payment completed successfully!");
+            const finalUrl = redirectUrl || `/book/${businessId}/confirmation?bookingId=${bookingId}`;
+            setTimeout(() => router.push(finalUrl), 1500);
+          } else if (payment.status === "FAILED") {
+            setStatus("error");
+            setMessage(payment.failureReason || "Payment failed");
+          } else if (attempts < maxAttempts) {
+            setTimeout(pollStatus, 2000);
+          } else {
+            setStatus("success");
+            setMessage("Redirecting to your booking...");
+            const finalUrl = redirectUrl || `/book/${businessId}/confirmation?bookingId=${bookingId}`;
+            setTimeout(() => router.push(finalUrl), 1500);
+          }
+        } else {
+          setStatus("success");
+          setMessage("Redirecting to your booking...");
+          setTimeout(() => router.push(`/book/${businessId}/confirmation?bookingId=${bookingId}`), 1500);
+        }
+      };
+      pollStatus();
+    } catch {
+      setStatus("success");
+      setMessage("Redirecting to your booking...");
+      const finalUrl = redirectUrl || `/book/${businessId}/confirmation?bookingId=${bookingId}`;
+      setTimeout(() => router.push(finalUrl), 1500);
+    }
+  }, [paymentId, bookingId, businessId, redirectUrl, router]);
 
-  const verifyPayment = async () => {
+  const verifyPayment = useCallback(async () => {
     try {
       const ref = reference || trxref;
       if (!ref) {
@@ -68,85 +99,25 @@ export default function PaymentCallbackPage() {
       setTimeout(() => {
         router.push(finalUrl);
       }, 1500);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Payment verification error:", error);
-      // Even on error, redirect to confirmation (webhook will verify)
       setStatus("success");
       setMessage("Redirecting to your booking...");
       const finalUrl = redirectUrl || `/book/${businessId}/confirmation?bookingId=${bookingId}`;
-      setTimeout(() => {
-        router.push(finalUrl);
-      }, 1500);
+      setTimeout(() => router.push(finalUrl), 1500);
     }
-  };
+  }, [reference, trxref, paymentId, bookingId, businessId, redirectUrl, router, checkPaymentStatus]);
 
-  const checkPaymentStatus = async () => {
-    if (!paymentId) {
-      // No payment ID, just redirect to confirmation
-      const finalUrl = redirectUrl || `/book/${businessId}/confirmation?bookingId=${bookingId}`;
-      setTimeout(() => {
-        router.push(finalUrl);
-      }, 1500);
-      return;
+  useEffect(() => {
+    if (bookingId && (reference || trxref)) {
+      verifyPayment();
+    } else if (bookingId && paymentId) {
+      checkPaymentStatus();
+    } else {
+      setStatus("error");
+      setMessage("Missing payment information. Please contact support.");
     }
-
-    try {
-      // Poll payment status (max 3 attempts)
-      let attempts = 0;
-      const maxAttempts = 3;
-
-      const pollStatus = async () => {
-        attempts++;
-        const response = await fetch(`/api/payments/${paymentId}`);
-        
-        if (response.ok) {
-          const payment = await response.json();
-          if (payment.status === "COMPLETED") {
-            setStatus("success");
-            setMessage("Payment completed successfully!");
-            const finalUrl = redirectUrl || `/book/${businessId}/confirmation?bookingId=${bookingId}`;
-            setTimeout(() => {
-              router.push(finalUrl);
-            }, 1500);
-          } else if (payment.status === "FAILED") {
-            setStatus("error");
-            setMessage(payment.failureReason || "Payment failed");
-          } else if (attempts < maxAttempts) {
-            // Still processing, wait a bit and check again
-            setTimeout(() => {
-              pollStatus();
-            }, 2000);
-          } else {
-            // Max attempts reached, redirect anyway (webhook will handle verification)
-            setStatus("success");
-            setMessage("Redirecting to your booking...");
-            const finalUrl = redirectUrl || `/book/${businessId}/confirmation?bookingId=${bookingId}`;
-            setTimeout(() => {
-              router.push(finalUrl);
-            }, 1500);
-          }
-        } else {
-          // If we can't check status, redirect anyway and let webhook handle it
-          setStatus("success");
-          setMessage("Redirecting to your booking...");
-          setTimeout(() => {
-            router.push(`/book/${businessId}/confirmation?bookingId=${bookingId}`);
-          }, 1500);
-        }
-      };
-
-      pollStatus();
-    } catch (error: any) {
-      console.error("Payment status check error:", error);
-      // If we can't check status, redirect anyway and let webhook handle it
-      setStatus("success");
-      setMessage("Redirecting to your booking...");
-      const finalUrl = redirectUrl || `/book/${businessId}/confirmation?bookingId=${bookingId}`;
-      setTimeout(() => {
-        router.push(finalUrl);
-      }, 1500);
-    }
-  };
+  }, [bookingId, reference, trxref, paymentId, verifyPayment, checkPaymentStatus]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20 p-4">
