@@ -45,8 +45,6 @@ function SignInContent() {
       const normalizedEmail = formData.email.trim().toLowerCase();
       const trimmedPassword = formData.password.trim();
 
-      console.log("[SIGNIN] Attempting sign in for:", normalizedEmail);
-      
       const result = await signIn("credentials", {
         email: normalizedEmail,
         password: trimmedPassword,
@@ -54,14 +52,6 @@ function SignInContent() {
       });
 
       if (result?.error) {
-        // Enhanced error logging
-        console.error("[SIGNIN] Sign in error:", {
-          error: result.error,
-          email: normalizedEmail,
-          timestamp: new Date().toISOString(),
-          url: result.url,
-        });
-        
         let errorMessage = "Unable to sign in. Please try again.";
         let errorDetails = "";
         
@@ -83,7 +73,7 @@ function SignInContent() {
           errorDetails = "Please enter both your email and password.";
         } else if (result.error.includes("DATABASE_CONNECTION_ERROR") || result.error.includes("DATABASE_ERROR")) {
           errorMessage = "Database connection error.";
-          errorDetails = "Unable to connect to the database. This may be a temporary issue. Please try again in a moment. If the problem persists, contact support.";
+          errorDetails = "We couldn't reach the database. If you use Neon: your project may be paused—open console.neon.tech, open your project to wake it, wait a few seconds, then try signing in again. You can also try clicking Sign in again in case the database was waking up.";
         } else if (result.error.includes("Configuration")) {
           errorMessage = "Server configuration error.";
           errorDetails = "There's an issue with the server configuration. Please contact support if this persists.";
@@ -91,18 +81,10 @@ function SignInContent() {
           errorMessage = "Access denied.";
           errorDetails = "Your account may be suspended or inactive. Please contact support.";
         } else {
-          // Show the actual error in development
           if (process.env.NODE_ENV === "development") {
             errorDetails = `Error: ${result.error}`;
           }
         }
-        
-        // Log to console for debugging (always, not just in dev)
-        console.error("[SIGNIN] Full error details:", {
-          error: result.error,
-          email: normalizedEmail,
-          timestamp: new Date().toISOString(),
-        });
         
         toast({
           title: errorMessage,
@@ -110,44 +92,22 @@ function SignInContent() {
           variant: "destructive",
           duration: 5000,
         });
+        setLoading(false);
       } else {
-        toast({
-          title: "Success",
-          description: "Signed in successfully",
-        });
-        // Redirect to callback URL if provided, otherwise go to dashboard
+        // Navigate to dashboard; keep "Signing in..." until the new page appears
         const redirectTo = callbackUrl || "/dashboard";
-        router.push(redirectTo);
+        await router.push(redirectTo);
         router.refresh();
       }
     } catch (err: any) {
-      // Enhanced exception logging
-      console.error("[SIGNIN] Sign in exception:", {
-        error: err?.message,
-        stack: err?.stack,
-        name: err?.name,
-        email: formData.email,
-        timestamp: new Date().toISOString(),
-      });
-      
-      let errorMessage = "An unexpected error occurred.";
-      let errorDetails = "Please try again. If the problem persists, contact support.";
-      
-      if (err?.message) {
-        errorDetails = `Error: ${err.message}`;
-      }
-      
-      if (process.env.NODE_ENV === "development") {
-        errorDetails += `\n\nTechnical details: ${err?.stack || JSON.stringify(err)}`;
-      }
-      
       toast({
-        title: errorMessage,
-        description: errorDetails,
+        title: "An unexpected error occurred.",
+        description: err?.message
+          ? err.message
+          : "Please try again. If the problem persists, contact support.",
         variant: "destructive",
-        duration: 6000,
+        duration: 5000,
       });
-    } finally {
       setLoading(false);
     }
   };
@@ -178,15 +138,6 @@ function SignInContent() {
                 </AlertDescription>
               </Alert>
             )}
-            {/* Debug info in development */}
-            {process.env.NODE_ENV === "development" && (
-              <Alert className="mb-4 border-blue-200 bg-blue-50 dark:bg-blue-950/20">
-                <AlertDescription className="text-xs">
-                  <strong>Debug Mode:</strong> Check the browser console and server logs for detailed error information.
-                </AlertDescription>
-              </Alert>
-            )}
-            
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>

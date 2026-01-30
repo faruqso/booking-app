@@ -255,6 +255,7 @@ model Booking {
   updatedAt DateTime @updatedAt
 
   @@index([businessId])
+  @@index([businessId, startTime, status]) // Hot path: slots and list by business + date + status
   @@index([locationId])
   @@index([serviceId])
   @@index([startTime])

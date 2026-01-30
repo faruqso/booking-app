@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
  * GET /api/business/payment-config/status
  * Returns the configuration status of payment provider including webhook setup
  */
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -99,8 +99,9 @@ export async function GET(request: Request) {
       };
     };
 
-    const providerStatus = business.paymentProvider 
-      ? getProviderStatus(business.paymentProvider)
+    const provider = business.paymentProvider as "stripe" | "paystack" | "flutterwave" | null;
+    const providerStatus = provider 
+      ? getProviderStatus(provider)
       : null;
 
     return NextResponse.json({

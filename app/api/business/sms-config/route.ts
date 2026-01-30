@@ -13,7 +13,7 @@ const smsConfigSchema = z.object({
   smsRemindersEnabled: z.boolean().optional(),
 });
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   try {
     const session = await getServerSession(authOptions);
 

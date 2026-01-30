@@ -12,7 +12,7 @@ const bookingRulesSchema = z.object({
   bookingBufferMinutes: z.number().int().min(0).max(120), // 0 to 2 hours
 });
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   try {
     const session = await getServerSession(authOptions);
 

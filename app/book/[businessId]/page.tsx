@@ -1,8 +1,15 @@
 "use client";
 
+/**
+ * Booking flow: service → date → time → details → payment (if required).
+ * State: selectedService, selectedDate, selectedTime, customerData, pendingBookingData, bookingId.
+ * Handlers: onServiceSelected, onDateSelected, onTimeSelected, onSubmitDetails → createBooking or step "payment"; onPayment → createBooking then payment API.
+ * Errors: setError + conflictAlternatives for slot conflicts; displayed in Alert at top of main content.
+ */
+
 import { useState, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { format, addDays, startOfDay, parseISO } from "date-fns";
+import { format, addDays, startOfDay, parseISO, isToday } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +25,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { formatCurrency } from "@/lib/utils/currency";
 import { PaystackInline } from "@/components/payments/paystack-inline";
 import { useToast } from "@/hooks/use-toast";
+import { BookingServiceStep } from "@/components/booking/booking-service-step";
 
 interface Service {
   id: string;
@@ -394,7 +402,6 @@ export default function BookingPage() {
       throw new Error("Booking data is missing");
     }
 
-    const startTime = parseISO(selectedTime);
     const response = await fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -759,66 +766,11 @@ export default function BookingPage() {
 
             <AnimatePresence mode="wait">
               {step === "service" && (
-                <motion.div
-                  key="service"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <h2 className="text-2xl font-semibold mb-6">Select a Service</h2>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {business.services.map((service) => (
-                      <motion.button
-                        key={service.id}
-                        onClick={() => handleServiceSelect(service)}
-                        className="text-left p-6 border-2 rounded-lg transition-all hover:border-primary hover:shadow-lg hover:scale-[1.02] bg-card"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        {service.imageUrl && (
-                          <div className="mb-3 rounded-lg overflow-hidden">
-                            <img
-                              src={service.imageUrl}
-                              alt={service.name}
-                              className="w-full h-32 object-cover"
-                            />
-                          </div>
-                        )}
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                          <h3 className="font-semibold text-lg">{service.name}</h3>
-                            {service.category && (
-                              <Badge variant="outline" className="mt-1 text-xs">
-                                {service.category}
-                              </Badge>
-                            )}
-                          </div>
-                          <Badge variant="secondary" className="ml-2">
-                            {formatCurrency(service.price, business?.currency)}
-                          </Badge>
-                        </div>
-                        {service.description && (
-                          <p className="text-sm text-muted-foreground mb-3">
-                            {service.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            <span>{service.duration} min</span>
-                          </div>
-                          {service.maxCapacity && service.maxCapacity > 1 && (
-                            <div className="flex items-center gap-1">
-                              <Users className="h-4 w-4" />
-                              <span>Up to {service.maxCapacity} people</span>
-                            </div>
-                          )}
-                        </div>
-                      </motion.button>
-                    ))}
-                  </div>
-                </motion.div>
+                <BookingServiceStep
+                  services={business.services}
+                  currency={business.currency}
+                  onServiceSelected={handleServiceSelect}
+                />
               )}
 
               {step === "date" && selectedService && (
@@ -878,28 +830,39 @@ export default function BookingPage() {
                         ? "When enabled, the earliest available date and time will be automatically selected when you choose a service."
                         : "Enable automatic selection to skip manual date/time selection, or choose a specific date below."}
                     </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Click a date to see available times for that day.
+                    </p>
                   </div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">
+                    Next 30 days
+                  </p>
                   <div className="grid grid-cols-7 gap-2">
                     {availableDates.map((date) => {
                       const isSelected =
                         selectedDate?.toDateString() === date.toDateString();
+                      const isTodayDate = isToday(date);
                       return (
                         <motion.button
                           key={date.toISOString()}
                           onClick={() => handleDateSelect(date)}
                           className={`p-4 rounded-lg border-2 transition-all ${
                             isSelected
-                              ? "border-primary bg-primary text-primary-foreground shadow-lg"
-                              : "border-muted hover:border-primary/50 bg-card"
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : isTodayDate
+                                ? "border-primary/50 hover:border-primary/70 bg-card"
+                                : "border-muted hover:border-primary/50 bg-card"
                           }`}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                         >
                           <div className="text-xs font-medium mb-1">
                             {format(date, "EEE")}
                           </div>
                           <div className="text-lg font-semibold">{format(date, "d")}</div>
-                          <div className="text-xs mt-1">{format(date, "MMM")}</div>
+                          <div className="text-xs mt-1">
+                            {isTodayDate ? "Today" : format(date, "MMM")}
+                          </div>
                         </motion.button>
                       );
                     })}

@@ -41,7 +41,9 @@ export function formatCurrency(amount: number | string, currencyCode: string = "
 /**
  * Get currencies supported by a payment provider
  */
-export function getCurrenciesForProvider(provider: "stripe" | "paystack" | "flutterwave" | null): typeof SUPPORTED_CURRENCIES {
+export type CurrencyItem = (typeof SUPPORTED_CURRENCIES)[number];
+
+export function getCurrenciesForProvider(provider: "stripe" | "paystack" | "flutterwave" | null): readonly CurrencyItem[] {
   if (!provider) return SUPPORTED_CURRENCIES;
-  return SUPPORTED_CURRENCIES.filter((c) => c.providerSupport.includes(provider)) as typeof SUPPORTED_CURRENCIES;
+  return SUPPORTED_CURRENCIES.filter((c) => (c.providerSupport as readonly string[]).includes(provider));
 }

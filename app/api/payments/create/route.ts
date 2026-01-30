@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { createStripePaymentIntent } from "@/lib/payments/stripe";
 import { createPaystackPayment } from "@/lib/payments/paystack";
 import { createFlutterwavePayment } from "@/lib/payments/flutterwave";
 import { rateLimiter, getClientIP } from "@/lib/security/rate-limiter";
-import { validateOrigin, generateIdempotencyKey, signPaymentRequest, verifyRequestSignature } from "@/lib/security/request-validator";
+import { validateOrigin, verifyRequestSignature } from "@/lib/security/request-validator";
 
 export const dynamic = 'force-dynamic';
 
@@ -102,14 +100,6 @@ export async function POST(request: Request) {
     // Security: Verify request signature (if provided)
     if (validatedData.signature && validatedData.timestamp) {
       const secret = process.env.PAYMENT_REQUEST_SECRET || "default-secret-change-in-production";
-      const expectedSignature = signPaymentRequest(
-        validatedData.bookingId,
-        validatedData.amount,
-        validatedData.currency || "USD",
-        validatedData.timestamp,
-        secret
-      );
-      
       if (!verifyRequestSignature(
         `${validatedData.bookingId}:${validatedData.amount}:${validatedData.currency || "USD"}:${validatedData.timestamp}`,
         validatedData.signature,

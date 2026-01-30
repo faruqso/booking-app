@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { getCurrenciesForProvider, SUPPORTED_CURRENCIES } from "@/lib/utils/currency";
+import { getCurrenciesForProvider } from "@/lib/utils/currency";
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +23,7 @@ const paymentConfigSchema = z.object({
   depositPercentage: z.number().min(0).max(100).optional().nullable(),
 });
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   try {
     const session = await getServerSession(authOptions);
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
+import { Prisma, type BookingStatus } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
@@ -188,8 +189,7 @@ export async function POST(request: Request) {
     }
 
     // Check for conflicts with intelligent alternatives
-    // Filter by location: bookings at the same location, or at "all locations" (null)
-    const bookingWhere: any = {
+    const bookingWhere: Prisma.BookingWhereInput = {
       businessId: validatedData.businessId,
       startTime: {
         gte: date,
@@ -198,19 +198,15 @@ export async function POST(request: Request) {
       status: {
         not: "CANCELLED",
       },
+      ...(bookingLocationId !== null
+        ? {
+            OR: [
+              { locationId: bookingLocationId },
+              { locationId: null },
+            ],
+          }
+        : { locationId: null }),
     };
-
-    // Phase 2: Filter bookings by location
-    if (bookingLocationId !== null) {
-      // Only check conflicts with bookings at this location or at all locations
-      bookingWhere.OR = [
-        { locationId: bookingLocationId },
-        { locationId: null }, // All locations bookings conflict with specific location bookings
-      ];
-    } else {
-      // Booking for all locations - conflicts with all other bookings
-      bookingWhere.locationId = null; // Only check against other "all locations" bookings
-    }
 
     const existingBookings = await prisma.booking.findMany({
       where: bookingWhere,
@@ -399,20 +395,18 @@ export async function POST(request: Request) {
       depositPercentage: business.depositPercentage,
       currency: business.currency || "USD",
     }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.errors[0].message },
         { status: 400 }
       );
     }
-
-    console.error("Booking creation error:", error);
+    const message = error instanceof Error ? error.message : "Failed to create booking";
+    const details = error instanceof Error && process.env.NODE_ENV === "development" ? error.stack : undefined;
+    console.error("Booking creation error:", message);
     return NextResponse.json(
-      { 
-        error: error.message || "Failed to create booking",
-        details: process.env.NODE_ENV === "development" ? error.stack : undefined
-      },
+      { error: message, ...(details && { details }) },
       { status: 500 }
     );
   }
@@ -430,27 +424,31 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
-    const date = searchParams.get("date");
+    const statusParam = searchParams.get("status");
+    const dateParam = searchParams.get("date");
 
-    const where: any = {
+    const validStatuses: BookingStatus[] = ["PENDING", "CONFIRMED", "CANCELLED", "COMPLETED", "NO_SHOW"];
+    const statusFilter: BookingStatus | undefined =
+      statusParam && validStatuses.includes(statusParam as BookingStatus) ? (statusParam as BookingStatus) : undefined;
+
+    const where: Prisma.BookingWhereInput = {
       businessId: session.user.businessId,
+      ...(statusFilter ? { status: statusFilter } : {}),
+      ...(dateParam
+        ? (() => {
+            const startOfDayDate = new Date(dateParam);
+            startOfDayDate.setHours(0, 0, 0, 0);
+            const endOfDayDate = new Date(dateParam);
+            endOfDayDate.setHours(23, 59, 59, 999);
+            return {
+              startTime: {
+                gte: startOfDayDate,
+                lte: endOfDayDate,
+              },
+            };
+          })()
+        : {}),
     };
-
-    if (status) {
-      where.status = status;
-    }
-
-    if (date) {
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-      where.startTime = {
-        gte: startOfDay,
-        lte: endOfDay,
-      };
-    }
 
     const bookings = await prisma.booking.findMany({
       where,
@@ -490,8 +488,9 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json(bookings);
-  } catch (error) {
-    console.error("Bookings fetch error:", error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Bookings fetch error:", message);
     return NextResponse.json(
       { error: "Failed to fetch bookings" },
       { status: 500 }

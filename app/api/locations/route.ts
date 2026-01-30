@@ -15,7 +15,7 @@ const locationSchema = z.object({
   isActive: z.boolean().optional().default(true),
 });
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.businessId) {

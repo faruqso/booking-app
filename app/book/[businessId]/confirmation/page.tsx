@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, Calendar, Clock, Loader2, ArrowLeft, CreditCard, AlertCircle, Building2, MapPin, Mail, Phone, Receipt } from "lucide-react";
+import { CheckCircle2, Loader2, ArrowLeft, CreditCard, AlertCircle, Receipt } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatCurrency } from "@/lib/utils/currency";
 

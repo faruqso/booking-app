@@ -213,11 +213,12 @@ export default function BookingsPage() {
   };
 
   const handleBookingStatusChange = async (status: "CONFIRMED" | "CANCELLED" | "COMPLETED") => {
-    if (!bookingDetails) return;
+    const bookingId = selectedBooking?.id ?? bookingDetails?.id;
+    if (!bookingId) return;
     
     setUpdating(true);
     try {
-      const response = await fetch(`/api/bookings/${bookingDetails.id}`, {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),

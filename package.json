@@ -16,7 +16,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "vercel-build": "npm install --include=dev && prisma generate && next build",
+    "vercel-build": "npm install --include=dev && prisma generate && prisma db push && next build",
     "prepare": "husky || true"
   },
   "dependencies": {

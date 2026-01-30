@@ -1,10 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, RefreshCw, Home } from "lucide-react";
-import Link from "next/link";
 
 export default function Error({
   error,
@@ -14,67 +10,37 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log error to error reporting service
     console.error("Application error:", error);
   }, [error]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-      <Card className="w-full max-w-md border-2 shadow-lg">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="rounded-full bg-destructive/10 p-3">
-              <AlertCircle className="h-8 w-8 text-destructive" />
-            </div>
-          </div>
-          <CardTitle className="text-2xl">Something went wrong!</CardTitle>
-          <CardDescription className="mt-2">
-            We encountered an unexpected error. Don&apos;t worry, your data is safe.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {process.env.NODE_ENV === "development" && error.message && (
-            <div className="rounded-lg bg-muted p-4">
-              <p className="text-sm font-mono text-muted-foreground break-all">
-                {error.message}
-              </p>
-              {error.digest && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  Error ID: {error.digest}
-                </p>
-              )}
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button
-              onClick={reset}
-              className="flex-1"
-              size="lg"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Try Again
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              className="flex-1"
-              size="lg"
-            >
-              <Link href="/">
-                <Home className="mr-2 h-4 w-4" />
-                Go Home
-              </Link>
-            </Button>
-          </div>
-
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">
-              If this problem persists, please contact support.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem", background: "#fafafa" }}>
+      <div style={{ maxWidth: "28rem", width: "100%", padding: "1.5rem", background: "white", borderRadius: "0.5rem", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", border: "1px solid #e5e7eb" }}>
+        <h1 style={{ fontSize: "1.5rem", fontWeight: 600, marginBottom: "0.5rem" }}>Something went wrong</h1>
+        <p style={{ color: "#6b7280", marginBottom: "1rem", fontSize: "0.875rem" }}>
+          We encountered an unexpected error. Your data is safe.
+        </p>
+        {process.env.NODE_ENV === "development" && error?.message && (
+          <pre style={{ fontSize: "0.75rem", background: "#f3f4f6", padding: "0.75rem", borderRadius: "0.25rem", overflow: "auto", marginBottom: "1rem" }}>
+            {error.message}
+          </pre>
+        )}
+        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={reset}
+            style={{ padding: "0.5rem 1rem", background: "#2563eb", color: "white", border: "none", borderRadius: "0.375rem", cursor: "pointer", fontSize: "0.875rem" }}
+          >
+            Try again
+          </button>
+          <a
+            href="/"
+            style={{ padding: "0.5rem 1rem", background: "white", color: "#374151", border: "1px solid #d1d5db", borderRadius: "0.375rem", textDecoration: "none", fontSize: "0.875rem" }}
+          >
+            Go home
+          </a>
+        </div>
+      </div>
     </div>
   );
 }

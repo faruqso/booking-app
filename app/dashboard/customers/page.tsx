@@ -149,6 +149,7 @@ export default function CustomersPage() {
 
       return () => clearTimeout(timeoutId);
     }
+    return undefined;
   }, [search, status, fetchCustomers]);
 
   const onSubmit = async (data: CustomerFormValues) => {

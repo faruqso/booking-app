@@ -9,9 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock, CheckCircle2, AlertCircle, TrendingUp, Copy, ExternalLink, Link2 } from "lucide-react";
+import { Calendar, Clock, CheckCircle2, AlertCircle, TrendingUp, Copy, ExternalLink, Link2, User, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
+import { Modal, ModalFooter, ModalButton } from "@/components/ui/modal";
 
 interface Booking {
   id: string;
@@ -36,6 +37,10 @@ export default function DashboardPage() {
     upcoming: 0,
     pending: 0,
   });
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
   
   // Hooks must be called before any conditional returns
   const businessId = session?.user?.businessId;
@@ -54,6 +59,7 @@ export default function DashboardPage() {
     } else if (status === "authenticated") {
       fetchBookings();
     }
+    return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]); // Removed router dependency to avoid unnecessary re-renders
 
@@ -68,17 +74,18 @@ export default function DashboardPage() {
       const response = await fetch("/api/bookings");
       if (response.ok) {
         const data = await response.json();
-        setBookings(data);
+        setBookings(Array.isArray(data) ? data : []);
 
         const today = startOfDay(new Date());
-        const todayBookings = data.filter((b: Booking) => {
+        const list = Array.isArray(data) ? data : [];
+        const todayBookings = list.filter((b: Booking) => {
           const bookingDate = startOfDay(new Date(b.startTime));
           return bookingDate.getTime() === today.getTime();
         });
-        const upcomingBookings = data.filter((b: Booking) =>
+        const upcomingBookings = list.filter((b: Booking) =>
           isFuture(new Date(b.startTime))
         );
-        const pendingBookings = data.filter(
+        const pendingBookings = list.filter(
           (b: Booking) => b.status === "PENDING"
         );
 
@@ -97,6 +104,50 @@ export default function DashboardPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openDialog = (booking: Booking, action: string) => {
+    setSelectedBooking(booking);
+    setPendingAction(action);
+    setDialogOpen(true);
+  };
+
+  const confirmBookingAction = async () => {
+    if (!selectedBooking || !pendingAction) return;
+    setUpdating(true);
+    try {
+      const response = await fetch(`/api/bookings/${selectedBooking.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: pendingAction }),
+      });
+
+      if (response.ok) {
+        setDialogOpen(false);
+        setSelectedBooking(null);
+        setPendingAction(null);
+        fetchBookings();
+        toast({
+          title: "Success",
+          description: `Booking ${pendingAction.toLowerCase()} successfully`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update booking status",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update booking:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update booking status",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -332,7 +383,8 @@ export default function DashboardPage() {
                       <div className="flex gap-2 ml-4">
                         <Button
                           size="sm"
-                          onClick={() => handleStatusChange(booking.id, "CONFIRMED")}
+                          onClick={() => openDialog(booking, "CONFIRMED")}
+                          disabled={updating}
                         >
                           <CheckCircle2 className="h-4 w-4 mr-1" />
                           Confirm
@@ -340,7 +392,8 @@ export default function DashboardPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleStatusChange(booking.id, "CANCELLED")}
+                          onClick={() => openDialog(booking, "CANCELLED")}
+                          disabled={updating}
                         >
                           Cancel
                         </Button>
@@ -406,6 +459,86 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Confirmation modal for Confirm / Cancel booking */}
+      <Modal
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title={
+          pendingAction === "CANCELLED"
+            ? "Cancel Booking"
+            : "Confirm Booking"
+        }
+        description={
+          pendingAction === "CANCELLED"
+            ? "Are you sure you want to cancel this booking? This action cannot be undone."
+            : "Confirm this booking to notify the customer and add it to your schedule."
+        }
+        size="lg"
+        footer={
+          <ModalFooter>
+            <ModalButton
+              variant="outline"
+              onClick={() => {
+                setDialogOpen(false);
+                setSelectedBooking(null);
+                setPendingAction(null);
+              }}
+              disabled={updating}
+            >
+              Cancel
+            </ModalButton>
+            <ModalButton
+              variant={pendingAction === "CANCELLED" ? "destructive" : "default"}
+              onClick={confirmBookingAction}
+              loading={updating}
+            >
+              {pendingAction === "CANCELLED" ? "Cancel Booking" : "Confirm Booking"}
+            </ModalButton>
+          </ModalFooter>
+        }
+      >
+        {selectedBooking && (
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-muted/30 p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 mt-0.5 flex-shrink-0">
+                  <User className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                    Customer
+                  </p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {selectedBooking.customerName}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {selectedBooking.customerEmail}
+                  </p>
+                </div>
+              </div>
+              <div className="h-px bg-border my-2" />
+              <div className="flex items-start gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 mt-0.5 flex-shrink-0">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                    Service
+                  </p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {selectedBooking.service.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    {format(new Date(selectedBooking.startTime), "MMM d, h:mm a")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

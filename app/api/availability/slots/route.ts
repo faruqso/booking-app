@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getAvailabilityForDate, generateTimeSlots } from "@/lib/availability";
-import { parseISO, startOfDay } from "date-fns";
+import { addMinutes, isBefore, isSameDay, parseISO, startOfDay } from "date-fns";
 
 export const dynamic = 'force-dynamic';
 
@@ -22,42 +23,38 @@ export async function GET(request: Request) {
 
     const date = startOfDay(parseISO(dateStr));
 
-    // Get business with booking rules
-    const business = await prisma.business.findUnique({
-      where: { id: businessId },
-      select: {
-        bookingBufferMinutes: true,
-      },
-    });
+    // Load business, availability, and service (when serviceId) in parallel
+    const [business, availability, service] = await Promise.all([
+      prisma.business.findUnique({
+        where: { id: businessId },
+        select: {
+          bookingBufferMinutes: true,
+          minimumAdvanceBookingHours: true,
+        },
+      }),
+      prisma.availability.findUnique({
+        where: { businessId },
+      }),
+      serviceId
+        ? prisma.service.findUnique({
+            where: { id: serviceId },
+            select: { duration: true, locationId: true },
+          })
+        : Promise.resolve(null),
+    ]);
 
     if (!business) {
       return NextResponse.json({ error: "Business not found" }, { status: 404 });
     }
-
-    // Get availability
-    const availability = await prisma.availability.findUnique({
-      where: { businessId },
-    });
-
     if (!availability) {
       return NextResponse.json({ slots: [] });
     }
 
-    // Get service duration and location
-    let duration = 30; // Default
+    let duration = 30;
     let serviceLocationId: string | null = null;
-    if (serviceId) {
-      const service = await prisma.service.findUnique({
-        where: { id: serviceId },
-        select: {
-          duration: true,
-          locationId: true,
-        },
-      });
-      if (service) {
-        duration = service.duration;
-        serviceLocationId = service.locationId;
-      }
+    if (service) {
+      duration = service.duration;
+      serviceLocationId = service.locationId;
     }
 
     // Determine which location to filter by
@@ -72,7 +69,7 @@ export async function GET(request: Request) {
     const endOfDate = new Date(startOfDate);
     endOfDate.setDate(endOfDate.getDate() + 1);
 
-    const bookingWhere: any = {
+    const bookingWhere: Prisma.BookingWhereInput = {
       businessId,
       startTime: {
         gte: startOfDate,
@@ -81,19 +78,15 @@ export async function GET(request: Request) {
       status: {
         not: "CANCELLED",
       },
+      ...(filterLocationId !== null
+        ? {
+            OR: [
+              { locationId: filterLocationId },
+              { locationId: null },
+            ],
+          }
+        : { locationId: null }),
     };
-
-    // Phase 2: Filter bookings by location
-    if (filterLocationId !== null) {
-      // Only check conflicts with bookings at this location or at all locations
-      bookingWhere.OR = [
-        { locationId: filterLocationId },
-        { locationId: null }, // All locations bookings conflict with specific location bookings
-      ];
-    } else {
-      // Service available at all locations - only check against other "all locations" bookings
-      bookingWhere.locationId = null;
-    }
 
     const bookings = await prisma.booking.findMany({
       where: bookingWhere,
@@ -108,7 +101,7 @@ export async function GET(request: Request) {
     });
 
     // Generate time slots with buffer time
-    const slots = generateTimeSlots(
+    let slots = generateTimeSlots(
       date,
       dayHours,
       duration,
@@ -119,11 +112,21 @@ export async function GET(request: Request) {
       business.bookingBufferMinutes || 0
     );
 
+    // Never show past times: when the selected date is today, filter out any slot
+    // that is in the past or within minimum advance booking time
+    const now = new Date();
+    if (isSameDay(date, now)) {
+      const minHours = business.minimumAdvanceBookingHours ?? 0;
+      const earliestAllowed = addMinutes(now, minHours * 60);
+      slots = slots.filter((slot) => !isBefore(slot, earliestAllowed));
+    }
+
     return NextResponse.json({
       slots: slots.map((slot) => slot.toISOString()),
     });
-  } catch (error) {
-    console.error("Slots generation error:", error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Slots generation error:", message);
     return NextResponse.json(
       { error: "Failed to generate time slots" },
       { status: 500 }

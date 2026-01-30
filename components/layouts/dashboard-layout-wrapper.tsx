@@ -1,6 +1,7 @@
 "use client";
 
 import { DashboardSidebar } from "./dashboard-sidebar";
+import { NavigationProgress } from "@/components/navigation-progress";
 
 export function DashboardLayoutWrapper({
   children,
@@ -9,6 +10,7 @@ export function DashboardLayoutWrapper({
 }) {
   return (
     <div className="flex h-screen overflow-hidden">
+      <NavigationProgress />
       <div className="flex-shrink-0 sticky top-0 self-start h-screen">
         <DashboardSidebar />
       </div>

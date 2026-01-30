@@ -20,7 +20,7 @@ const serviceSchema = z.object({
   maxCapacity: z.number().min(1).max(100).int().optional().default(1),
 });
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   try {
     const session = await getServerSession(authOptions);
 

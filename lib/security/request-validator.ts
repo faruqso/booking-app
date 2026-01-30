@@ -37,6 +37,7 @@ export function validateOrigin(
     try {
       const originUrl = new URL(origin);
       const isValid = allowed.some((allowedOrigin) => {
+        if (allowedOrigin == null) return false;
         try {
           const allowedUrl = new URL(allowedOrigin);
           return originUrl.origin === allowedUrl.origin;
@@ -58,6 +59,7 @@ export function validateOrigin(
     try {
       const refererUrl = new URL(referer);
       const isValid = allowed.some((allowedOrigin) => {
+        if (allowedOrigin == null) return false;
         try {
           const allowedUrl = new URL(allowedOrigin);
           return refererUrl.origin === allowedUrl.origin;

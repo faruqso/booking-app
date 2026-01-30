@@ -802,7 +802,6 @@ export default function CalendarPage() {
                 ref={calendarRef}
                 className={cn("h-full", isRescheduling && reschedulingStatus === "loading" && "pointer-events-none opacity-50")}
               >
-                {/* @ts-ignore - DragAndDropCalendar has additional props not in base Calendar types */}
                 <DragAndDropCalendarComponent
                   localizer={localizer}
                   events={filteredBookings}
@@ -816,13 +815,14 @@ export default function CalendarPage() {
                   onSelectEvent={handleSelectEvent}
                   onSelectSlot={handleSelectSlot}
                   selectable={true}
-                  onEventDrop={handleEventDrop}
+                  {...({
+                    onEventDrop: handleEventDrop,
+                    draggableAccessor: (event: BookingEvent) =>
+                      !isRescheduling &&
+                      event.resource.status !== "CANCELLED" &&
+                      event.resource.status !== "COMPLETED",
+                  } as Record<string, unknown>)}
                   eventPropGetter={eventStyleGetter}
-                  draggableAccessor={(event: BookingEvent) => 
-                    !isRescheduling && 
-                    event.resource.status !== "CANCELLED" && 
-                    event.resource.status !== "COMPLETED"
-                  }
                   step={15}
                   timeslots={4}
                   components={{

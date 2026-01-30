@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
  * Public endpoint to check payment status (for callback pages)
  */
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: { id: string } }
 ) {
   try {

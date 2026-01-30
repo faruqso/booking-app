@@ -15,13 +15,7 @@ const inviteStaffSchema = z.object({
   name: z.string().min(1, "Name is required"),
 });
 
-const createStaffSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  name: z.string().min(1, "Name is required"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
-
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.businessId) {

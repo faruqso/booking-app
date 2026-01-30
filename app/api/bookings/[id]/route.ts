@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
+import { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { subHours, isBefore, parseISO, addMinutes, startOfDay } from "date-fns";
@@ -70,8 +71,9 @@ export async function GET(
       paymentIntentId: booking.paymentIntentId,
       amountPaid: booking.amountPaid ? Number(booking.amountPaid) : null,
     });
-  } catch (error) {
-    console.error("Booking fetch error:", error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Booking fetch error:", message);
     return NextResponse.json(
       { error: "Failed to fetch booking" },
       { status: 500 }
@@ -190,10 +192,9 @@ export async function PATCH(
       }
       // If no availability is set, allow rescheduling (business owner discretion)
 
-      // Check for conflicts (excluding the current booking)
-      const conflictWhere: any = {
+      const conflictWhere: Prisma.BookingWhereInput = {
         businessId: session.user.businessId,
-        id: { not: id }, // Exclude current booking
+        id: { not: id },
         startTime: {
           gte: date,
           lt: addMinutes(date, 24 * 60),
@@ -201,15 +202,15 @@ export async function PATCH(
         status: {
           not: "CANCELLED",
         },
+        ...(existingBooking.locationId !== null
+          ? {
+              OR: [
+                { locationId: existingBooking.locationId },
+                { locationId: null },
+              ],
+            }
+          : { locationId: null }),
       };
-
-      // Filter by location if booking has a location
-      if (existingBooking.locationId !== null) {
-        conflictWhere.OR = [
-          { locationId: existingBooking.locationId },
-          { locationId: null },
-        ];
-      }
 
       const conflictingBookings = await prisma.booking.findMany({
         where: conflictWhere,
@@ -259,15 +260,10 @@ export async function PATCH(
       // If cancellationPolicyHours is 0, cancellation is always allowed
     }
 
-    // Build update data
-    const updateData: any = {};
-    if (updateStatus) {
-      updateData.status = status;
-    }
-    if (updateTime) {
-      updateData.startTime = newStartTime;
-      updateData.endTime = newEndTime;
-    }
+    const updateData: Prisma.BookingUpdateInput = {
+      ...(updateStatus ? { status } : {}),
+      ...(updateTime ? { startTime: newStartTime, endTime: newEndTime } : {}),
+    };
 
     const booking = await prisma.booking.update({
       where: { id: id },
@@ -397,8 +393,9 @@ export async function PATCH(
     }
 
     return NextResponse.json(booking);
-  } catch (error) {
-    console.error("Booking update error:", error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Booking update error:", message);
     return NextResponse.json(
       { error: "Failed to update booking" },
       { status: 500 }

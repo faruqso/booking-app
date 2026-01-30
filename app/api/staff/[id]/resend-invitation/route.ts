@@ -9,7 +9,7 @@ import { sendStaffInvitationEmail } from "@/lib/email";
 export const dynamic = 'force-dynamic';
 
 export async function POST(
-  request: Request,
+  _request: Request,
   { params }: { params: { id: string } }
 ) {
   try {

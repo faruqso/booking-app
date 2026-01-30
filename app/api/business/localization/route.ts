@@ -10,15 +10,15 @@ const localizationSchema = z.object({
   timeFormat: z.enum(["h:mm a", "HH:mm"]),
 });
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.businessId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const business = await prisma.business.findUnique({
-      where: { ownerId: session.user.id },
+      where: { id: session.user.businessId },
       select: {
         timezone: true,
         dateFormat: true,
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.businessId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -55,7 +55,7 @@ export async function PUT(request: NextRequest) {
     const validatedData = localizationSchema.parse(body);
 
     const business = await prisma.business.update({
-      where: { ownerId: session.user.id },
+      where: { id: session.user.businessId },
       data: {
         timezone: validatedData.timezone,
         dateFormat: validatedData.dateFormat,
