@@ -1,6 +1,10 @@
 import NextAuth from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+// Ensure this route runs on Node.js on Vercel (NextAuth does not support Edge)
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 // Add error handling for missing environment variables
 if (!process.env.NEXTAUTH_SECRET) {
   console.error("⚠️ [AUTH] NEXTAUTH_SECRET is not set! Authentication will fail.");
