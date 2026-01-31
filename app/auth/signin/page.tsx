@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,6 @@ import { useToast } from "@/hooks/use-toast";
 
 function SignInContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -64,14 +63,17 @@ function SignInContent() {
       const normalizedEmail = formData.email.trim().toLowerCase();
       const trimmedPassword = formData.password.trim();
 
+      const callbackUrlParam = callbackUrl || "/dashboard";
       const result = await Promise.race([
         signIn("credentials", {
           email: normalizedEmail,
           password: trimmedPassword,
-          redirect: false,
+          redirect: true,
+          callbackUrl: callbackUrlParam,
         }),
         timeoutPromise,
       ]);
+      // signIn with redirect: true doesn't return on success; if we get here, it failed or timed out
       // #region agent log
       fetch('http://127.0.0.1:7243/ingest/dac94886-3075-4737-bdca-5cc6718aa40e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1',location:'app/auth/signin/page.tsx:afterSignIn',message:'sign-in result',data:{hasError:!!result?.error,ok:result?.ok,status:result?.status,hasUrl:!!result?.url},timestamp:Date.now()})}).catch(()=>{});
       // #endregion
@@ -121,22 +123,21 @@ function SignInContent() {
           duration: 5000,
         });
         setLoading(false);
+      } else if (result?.url) {
+        // NextAuth returned a redirect URL (e.g. after success with redirect: true)
+        window.location.href = result.url;
       } else {
-        // Sign-in succeeded - redirect to dashboard (or callbackUrl if set)
+        // Full page redirect so session cookie is sent; router.push can run before
+        // cookie is available, causing middleware to redirect back to sign-in
         let path = callbackUrl || "/dashboard";
         try {
           if (path.startsWith("http")) {
             const u = new URL(path, window.location.origin);
             path = u.pathname + u.search;
           }
-          // Avoid redirect loops - if path is signin, go to dashboard instead
-          if (path.includes("/auth/signin") || path.includes("/auth/signup")) {
-            path = "/dashboard";
-          }
         } catch {
           path = "/dashboard";
         }
-        // Full page load so the session cookie is sent with the request
         window.location.href = path;
       }
     } catch (err: unknown) {
@@ -180,7 +181,7 @@ function SignInContent() {
                 </AlertDescription>
               </Alert>
             )}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form method="post" onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <div className="relative">
