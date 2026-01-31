@@ -162,8 +162,8 @@ export function DashboardSidebar() {
           href={item.href}
           prefetch={true}
           className={cn(
-            "flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all duration-300 ease-in-out",
-            collapsed ? "px-3 justify-center w-full" : "px-3 w-full max-w-[calc(100%-0.5rem)]",
+            "flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all duration-300 ease-in-out min-w-0",
+            collapsed ? "px-3 justify-center w-full" : "px-3 w-full",
             isNested && !collapsed && "ml-2",
             isActive
               ? "bg-primary text-primary-foreground shadow-sm"
@@ -173,8 +173,8 @@ export function DashboardSidebar() {
           <Icon className={cn("h-5 w-5 flex-shrink-0 transition-all duration-300", collapsed && "mx-auto")} />
           <span
             className={cn(
-              "truncate flex-1 min-w-0 whitespace-nowrap transition-all duration-300 ease-in-out",
-              collapsed && "opacity-0 max-w-0 overflow-hidden w-0"
+              "truncate min-w-0 transition-all duration-300 ease-in-out",
+              collapsed ? "opacity-0 max-w-0 overflow-hidden w-0" : "flex-1"
             )}
           >
             {item.name}
@@ -231,8 +231,8 @@ export function DashboardSidebar() {
   return (
     <TooltipProvider delayDuration={100}>
       <div className={cn(
-        "group flex h-screen flex-col border-r bg-background overflow-hidden transition-[width] duration-300 ease-in-out",
-        collapsed ? "w-16" : "w-64"
+        "group flex h-screen flex-col border-r bg-background overflow-hidden transition-[width] duration-300 ease-in-out flex-shrink-0",
+        collapsed ? "w-16 min-w-[4rem]" : "w-64 min-w-[16rem]"
       )}>
         {/* Logo/Brand - single DOM, crossfade */}
         <div className="flex h-16 flex-shrink-0 items-center border-b px-4 min-w-0">

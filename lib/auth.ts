@@ -4,8 +4,9 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-// Vercel Preview: use VERCEL_URL when NEXTAUTH_URL is not set (Preview env)
-if (process.env.VERCEL_URL && !process.env.NEXTAUTH_URL) {
+// Vercel only: use VERCEL_URL when NEXTAUTH_URL is not set (Preview env).
+// VERCEL is set by Vercel for every deployment; locally we never run this.
+if (process.env.VERCEL === "1" && process.env.VERCEL_URL && !process.env.NEXTAUTH_URL) {
   process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
 }
 
