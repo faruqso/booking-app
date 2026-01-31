@@ -4,6 +4,11 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+// Vercel Preview: use VERCEL_URL when NEXTAUTH_URL is not set (Preview env)
+if (process.env.VERCEL_URL && !process.env.NEXTAUTH_URL) {
+  process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
+}
+
 // Custom error class for database errors that NextAuth can handle
 class DatabaseError extends Error {
   constructor(message: string) {
