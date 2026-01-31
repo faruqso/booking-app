@@ -22,7 +22,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Autocomplete, AutocompleteOption } from "@/components/ui/autocomplete";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Clock, DollarSign, CheckCircle2, XCircle, Sparkles, Wand2, Lightbulb, Image, Tag, Users, Timer, MapPin, Upload, X } from "lucide-react";
+import { Loader2, Clock, DollarSign, CheckCircle2, XCircle, Sparkles, Wand2, Lightbulb, Tag, Users, Timer, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -54,7 +54,6 @@ const serviceSchema = z.object({
   isActive: z.boolean(),
   bufferTimeBefore: z.number().min(0).max(60).int().optional(),
   bufferTimeAfter: z.number().min(0).max(60).int().optional(),
-  imageUrl: z.union([z.string().url("Must be a valid URL"), z.literal("")]).optional(),
   category: z.string().max(50, "Category must be less than 50 characters").optional(),
   maxCapacity: z.number().min(1).max(100).int().optional(),
 });
@@ -100,8 +99,6 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
   const [generatingDescription, setGeneratingDescription] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loadingLocations, setLoadingLocations] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   const form = useForm<ServiceFormValues>({
@@ -115,7 +112,6 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
       isActive: service?.isActive ?? true,
       bufferTimeBefore: service?.bufferTimeBefore ?? 0,
       bufferTimeAfter: service?.bufferTimeAfter ?? 0,
-      imageUrl: service?.imageUrl || "",
       category: service?.category || "",
       maxCapacity: service?.maxCapacity ?? 1,
     },
@@ -153,16 +149,9 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
         isActive: service.isActive ?? true,
         bufferTimeBefore: service.bufferTimeBefore ?? 0,
         bufferTimeAfter: service.bufferTimeAfter ?? 0,
-        imageUrl: service.imageUrl || "",
         category: service.category || "",
         maxCapacity: service.maxCapacity ?? 1,
       });
-      if (service.imageUrl) {
-        setImagePreview(service.imageUrl);
-      } else {
-        setImagePreview(null);
-      }
-      setImageFile(null);
     } else {
       form.reset({
         name: "",
@@ -173,7 +162,6 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
         isActive: true,
         bufferTimeBefore: 0,
         bufferTimeAfter: 0,
-        imageUrl: "",
         category: "",
         maxCapacity: 1,
       });
@@ -197,46 +185,6 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
     };
   }, [hideActions]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload an image file",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate file size (max 5MB for service images)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please upload an image smaller than 5MB",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setImageFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      setImagePreview(base64String);
-      form.setValue("imageUrl", base64String);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleRemoveImage = () => {
-    setImagePreview(null);
-    setImageFile(null);
-    form.setValue("imageUrl", "");
-  };
-
   const onSubmit = async (data: ServiceFormValues) => {
     setLoading(true);
     
@@ -254,7 +202,6 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
       // Clean up data: convert empty strings to undefined for optional fields
       const cleanedData = {
         ...data,
-        imageUrl: data.imageUrl === "" ? undefined : data.imageUrl,
         category: data.category === "" ? undefined : data.category,
       };
 
@@ -850,89 +797,6 @@ export function ServiceForm({ service, onSuccess, onCancel, hideActions = false 
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="imageUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base flex items-center gap-2">
-                        <Image className="h-4 w-4" />
-                        Service Image
-                      </FormLabel>
-                      <FormControl>
-                        <div className="space-y-3">
-                          {imagePreview ? (
-                            <div className="relative">
-                              <div className="relative w-full h-48 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden bg-gray-50">
-                                <img
-                                  src={imagePreview}
-                                  alt="Service preview"
-                                  className="w-full h-full object-cover"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={handleRemoveImage}
-                                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                              <Input
-                                type="url"
-                                placeholder="Or enter image URL"
-                                className="h-11 mt-2"
-                                value={field.value || ""}
-                                onChange={(e) => {
-                                  field.onChange(e.target.value);
-                                  if (e.target.value) {
-                                    setImagePreview(e.target.value);
-                                    setImageFile(null);
-                                  }
-                                }}
-                              />
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={handleImageUpload}
-                                  className="hidden"
-                                  id="service-image-upload"
-                                />
-                                <label
-                                  htmlFor="service-image-upload"
-                                  className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary transition-colors"
-                                >
-                                  <Upload className="h-4 w-4" />
-                                  <span className="text-sm font-medium">Upload Image</span>
-                                </label>
-                              </div>
-                              <Input
-                                type="url"
-                                placeholder="Or enter image URL"
-                                className="h-11"
-                                value={field.value || ""}
-                                onChange={(e) => {
-                                  field.onChange(e.target.value);
-                                  if (e.target.value) {
-                                    setImagePreview(e.target.value);
-                                  }
-                                }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </FormControl>
-                      <FormDescription className="text-sm">
-                        Optional: Upload an image or provide a URL to showcase your service (max 5MB)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <FormField
                   control={form.control}
                   name="category"

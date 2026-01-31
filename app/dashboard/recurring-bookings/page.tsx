@@ -22,14 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -110,6 +102,10 @@ const DAYS_OF_WEEK = [
   { value: 5, label: "Friday" },
   { value: 6, label: "Saturday" },
 ];
+
+/** Sentinel values for Select (Radix does not allow empty string) */
+const ALL_LOCATIONS_VALUE = "__all_locations__";
+const NEW_CUSTOMER_VALUE = "__new_customer__";
 
 export default function RecurringBookingsPage() {
   const { data: session, status } = useSession();
@@ -217,6 +213,10 @@ export default function RecurringBookingsPage() {
   };
 
   const handleCustomerSelect = (customerId: string) => {
+    if (customerId === NEW_CUSTOMER_VALUE) {
+      setFormData({ ...formData, customerId: "" });
+      return;
+    }
     const customer = customers.find((c) => c.id === customerId);
     if (customer) {
       setFormData({
@@ -233,7 +233,10 @@ export default function RecurringBookingsPage() {
   };
 
   const handleLocationSelect = (locationId: string) => {
-    setFormData({ ...formData, locationId });
+    setFormData({
+      ...formData,
+      locationId: locationId === ALL_LOCATIONS_VALUE ? "" : locationId,
+    });
   };
 
   const handleOpenDialog = (recurring?: RecurringBooking) => {
@@ -628,23 +631,35 @@ export default function RecurringBookingsPage() {
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedRecurring ? "Edit Recurring Booking" : "Create Recurring Booking"}
-            </DialogTitle>
-            <DialogDescription>
-              Set up a recurring booking series that will automatically generate appointments
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+      {/* Create/Edit Modal */}
+      <Modal
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title={selectedRecurring ? "Edit Recurring Booking" : "Create Recurring Booking"}
+        description="Set up a recurring booking series that will automatically generate appointments"
+        size="2xl"
+        footer={
+          <ModalFooter>
+            <ModalButton variant="outline" onClick={() => setDialogOpen(false)} disabled={updating}>
+              Cancel
+            </ModalButton>
+            <Button
+              type="submit"
+              form="recurring-booking-form"
+              disabled={updating}
+            >
+              {updating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {selectedRecurring ? "Update" : "Create"}
+            </Button>
+          </ModalFooter>
+        }
+      >
+        <form id="recurring-booking-form" onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="serviceId">Service *</Label>
                 <Select
-                  value={formData.serviceId}
+                  value={formData.serviceId || undefined}
                   onValueChange={handleServiceSelect}
                   required
                 >
@@ -664,14 +679,14 @@ export default function RecurringBookingsPage() {
               <div className="space-y-2">
                 <Label htmlFor="locationId">Location</Label>
                 <Select
-                  value={formData.locationId}
+                  value={formData.locationId || ALL_LOCATIONS_VALUE}
                   onValueChange={handleLocationSelect}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="All Locations" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Locations</SelectItem>
+                    <SelectItem value={ALL_LOCATIONS_VALUE}>All Locations</SelectItem>
                     {locations.map((location) => (
                       <SelectItem key={location.id} value={location.id}>
                         {location.name}
@@ -685,14 +700,14 @@ export default function RecurringBookingsPage() {
             <div className="space-y-2">
               <Label htmlFor="customerId">Customer</Label>
               <Select
-                value={formData.customerId}
+                value={formData.customerId || NEW_CUSTOMER_VALUE}
                 onValueChange={handleCustomerSelect}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select customer or enter new" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">New Customer</SelectItem>
+                  <SelectItem value={NEW_CUSTOMER_VALUE}>New Customer</SelectItem>
                   {Array.isArray(customers) && customers.map((customer) => (
                     <SelectItem key={customer.id} value={customer.id}>
                       {customer.name} ({customer.email})
@@ -780,9 +795,9 @@ export default function RecurringBookingsPage() {
               <div className="space-y-2">
                 <Label htmlFor="dayOfWeek">Day of Week *</Label>
                 <Select
-                  value={formData.dayOfWeek}
+                  value={formData.dayOfWeek || undefined}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, dayOfWeek: value })
+                    setFormData({ ...formData, dayOfWeek: value ?? "" })
                   }
                   required
                 >
@@ -869,23 +884,8 @@ export default function RecurringBookingsPage() {
                 rows={3}
               />
             </div>
-
-            <DialogFooter className="pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={updating}>
-                {updating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {selectedRecurring ? "Update" : "Create"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+        </form>
+      </Modal>
 
       {/* Delete Confirmation Dialog */}
       <Modal

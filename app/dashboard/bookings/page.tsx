@@ -37,6 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { detectSentiment, getSentimentColor, getSentimentLabel } from "@/lib/ai/sentiment-detection";
 
 interface Booking {
@@ -92,7 +93,7 @@ export default function BookingsPage() {
     } else if (status === "unauthenticated") {
       window.location.href = "/auth/signin";
     }
-  }, [filter, status]);
+  }, [status]);
 
   const fetchLocalizationSettings = async () => {
     try {
@@ -112,11 +113,7 @@ export default function BookingsPage() {
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      const url =
-        filter === "all"
-          ? "/api/bookings"
-          : `/api/bookings?status=${filter}`;
-      const response = await fetch(url);
+      const response = await fetch("/api/bookings");
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -259,14 +256,29 @@ export default function BookingsPage() {
     }
   };
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeVariant = (status: string): "statusConfirmed" | "statusPending" | "statusCompleted" | "statusCancelled" | "outline" => {
     switch (status) {
       case "CONFIRMED":
-        return "default";
+        return "statusConfirmed";
       case "CANCELLED":
-        return "destructive";
+        return "statusCancelled";
       case "COMPLETED":
-        return "secondary";
+        return "statusCompleted";
+      case "PENDING":
+        return "statusPending";
+      default:
+        return "outline";
+    }
+  };
+
+  const getPaymentBadgeVariant = (paymentStatus: string): "paymentPaid" | "paymentPending" | "paymentProcessing" | "outline" => {
+    switch (paymentStatus) {
+      case "COMPLETED":
+        return "paymentPaid";
+      case "PROCESSING":
+        return "paymentProcessing";
+      case "PENDING":
+        return "paymentPending";
       default:
         return "outline";
     }
@@ -331,9 +343,10 @@ export default function BookingsPage() {
   };
 
 
-  // Filter and sort bookings
+  // Filter and sort bookings (all client-side; no refetch on filter change)
   const filteredAndSortedBookings = bookings
     .filter((booking) => {
+      if (filter !== "all" && booking.status !== filter) return false;
       if (!searchQuery) return true;
       const query = searchQuery.toLowerCase();
       return (
@@ -430,33 +443,63 @@ export default function BookingsPage() {
           </Select>
         </div>
 
-        {/* Quick Stats */}
+        {/* Quick Stats - clickable filters like calendar */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-          <Card className="border border-gray-200">
+          <Card
+            className={cn(
+              "border transition-colors cursor-pointer",
+              filter === "all" ? "border-gray-300 bg-gray-50/50" : "border-gray-200 hover:border-gray-300"
+            )}
+            onClick={() => setFilter("all")}
+          >
             <CardContent className="pt-4 pb-3">
               <div className="text-xs font-medium text-gray-600 mb-1">Total</div>
               <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
             </CardContent>
           </Card>
-          <Card className="border border-amber-200 bg-amber-50/50">
+          <Card
+            className={cn(
+              "border transition-colors cursor-pointer",
+              filter === "PENDING" ? "border-amber-300 bg-amber-50/50" : "border-amber-200 hover:border-amber-200 bg-amber-50/30"
+            )}
+            onClick={() => setFilter(filter === "PENDING" ? "all" : "PENDING")}
+          >
             <CardContent className="pt-4 pb-3">
               <div className="text-xs font-medium text-amber-700 mb-1">Pending</div>
               <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
             </CardContent>
           </Card>
-          <Card className="border border-blue-200 bg-blue-50/50">
+          <Card
+            className={cn(
+              "border transition-colors cursor-pointer",
+              filter === "CONFIRMED" ? "border-green-300 bg-green-50/50" : "border-gray-200 hover:border-green-200"
+            )}
+            onClick={() => setFilter(filter === "CONFIRMED" ? "all" : "CONFIRMED")}
+          >
             <CardContent className="pt-4 pb-3">
-              <div className="text-xs font-medium text-blue-700 mb-1">Confirmed</div>
-              <div className="text-2xl font-bold text-blue-600">{stats.confirmed}</div>
+              <div className="text-xs font-medium text-green-700 mb-1">Confirmed</div>
+              <div className="text-2xl font-bold text-green-600">{stats.confirmed}</div>
             </CardContent>
           </Card>
-          <Card className="border border-gray-200 bg-gray-50/50">
+          <Card
+            className={cn(
+              "border transition-colors cursor-pointer",
+              filter === "COMPLETED" ? "border-gray-300 bg-gray-50/50" : "border-gray-200 hover:border-gray-300 bg-gray-50/30"
+            )}
+            onClick={() => setFilter(filter === "COMPLETED" ? "all" : "COMPLETED")}
+          >
             <CardContent className="pt-4 pb-3">
               <div className="text-xs font-medium text-gray-700 mb-1">Completed</div>
               <div className="text-2xl font-bold text-gray-600">{stats.completed}</div>
             </CardContent>
           </Card>
-          <Card className="border border-red-200 bg-red-50/50">
+          <Card
+            className={cn(
+              "border transition-colors cursor-pointer",
+              filter === "CANCELLED" ? "border-red-300 bg-red-50/50" : "border-red-200 hover:border-red-200 bg-red-50/30"
+            )}
+            onClick={() => setFilter(filter === "CANCELLED" ? "all" : "CANCELLED")}
+          >
             <CardContent className="pt-4 pb-3">
               <div className="text-xs font-medium text-red-700 mb-1">Cancelled</div>
               <div className="text-2xl font-bold text-red-600">{stats.cancelled}</div>
@@ -470,19 +513,41 @@ export default function BookingsPage() {
           </Card>
         </div>
 
-        {/* Bookings Table */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+        {/* Bookings Table - same filter treatment as calendar: left border, tint, pill, subtitle, clear */}
+        <Card className={cn(
+          "border shadow-sm transition-colors",
+          filter === "CONFIRMED" && "border-l-4 border-l-green-500 border-gray-200 bg-green-50/20",
+          filter === "PENDING" && "border-l-4 border-l-amber-500 border-gray-200 bg-amber-50/20",
+          filter === "CANCELLED" && "border-l-4 border-l-red-500 border-gray-200 bg-red-50/20",
+          filter === "COMPLETED" && "border-l-4 border-l-gray-500 border-gray-200 bg-gray-50/50",
+          filter === "all" && "border-gray-200"
+        )}>
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
-                <CardTitle>Bookings</CardTitle>
-                <CardDescription>
-                  {filteredAndSortedBookings.length === 0
-                    ? "No bookings found"
-                    : `${filteredAndSortedBookings.length} of ${bookings.length} booking${bookings.length !== 1 ? "s" : ""} shown`}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <CardTitle className="text-xl font-bold text-gray-900">Bookings</CardTitle>
+                  {filter !== "all" && (
+                    <span className={cn(
+                      "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-0.5 text-xs font-medium",
+                      filter === "CONFIRMED" && "border-green-200 bg-green-100 text-green-800",
+                      filter === "PENDING" && "border-amber-200 bg-amber-100 text-amber-800",
+                      filter === "CANCELLED" && "border-red-200 bg-red-100 text-red-800",
+                      filter === "COMPLETED" && "border-gray-200 bg-gray-100 text-gray-700"
+                    )}>
+                      Filter: {filter.charAt(0) + filter.slice(1).toLowerCase()}
+                    </span>
+                  )}
+                </div>
+                <CardDescription className="text-sm text-gray-600 mt-0.5">
+                  {filter !== "all"
+                    ? `Showing ${filter.toLowerCase()} bookings only — click a stat card above to see all`
+                    : filteredAndSortedBookings.length === 0
+                      ? "No bookings found"
+                      : `${filteredAndSortedBookings.length} of ${bookings.length} booking${bookings.length !== 1 ? "s" : ""} shown`}
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <div className="relative w-64">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
@@ -653,14 +718,8 @@ export default function BookingsPage() {
                             {booking.paymentStatus ? (
                               <div className="space-y-1">
                                 <Badge
-                                  variant={
-                                    booking.paymentStatus === "COMPLETED"
-                                      ? "default"
-                                      : booking.paymentStatus === "PENDING"
-                                      ? "secondary"
-                                      : "destructive"
-                                  }
-                                  className="text-xs"
+                                  variant={getPaymentBadgeVariant(booking.paymentStatus)}
+                                  className="gap-1 font-normal"
                                 >
                                   {booking.paymentStatus}
                                 </Badge>
@@ -677,160 +736,122 @@ export default function BookingsPage() {
                           <TableCell>
                             <Badge
                               variant={getStatusBadgeVariant(booking.status)}
-                              className="gap-1.5"
+                              className="gap-1.5 font-normal"
                             >
                               {getStatusIcon(booking.status)}
                               {booking.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <TableCell className="text-right bg-muted/20" onClick={(e) => e.stopPropagation()}>
                             <div className="flex justify-end items-center gap-2">
                               {booking.status === "PENDING" && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  onClick={() =>
-                                    openDialog(booking, "CONFIRMED")
-                                  }
-                                  disabled={updating}
-                                  className="gap-1.5"
-                                >
-                                  <CheckCircle2 className="h-3.5 w-3.5" />
-                                  Confirm
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleReschedule(booking)}
-                                  disabled={updating}
-                                  className="gap-1.5"
-                                >
-                                  <Move className="h-3.5 w-3.5" />
-                                  Reschedule
-                                </Button>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      disabled={updating}
-                                      className="h-8 w-8 p-0"
-                                    >
-                                      <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-48">
-                                    <DropdownMenuItem
-                                      onClick={() => handleSendReminder(booking.id)}
-                                      disabled={sendingReminder === booking.id}
-                                    >
-                                      {sendingReminder === booking.id ? (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <Mail className="mr-2 h-4 w-4" />
-                                      )}
-                                      Send Reminder
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() => openDialog(booking, "CANCELLED")}
-                                      className="text-red-600 focus:text-red-600"
-                                    >
-                                      <XCircle className="mr-2 h-4 w-4" />
-                                      Cancel Booking
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </>
-                            )}
-                            {booking.status === "CONFIRMED" && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() =>
-                                    openDialog(booking, "COMPLETED")
-                                  }
-                                  disabled={updating}
-                                  className="gap-1.5"
-                                >
-                                  <CheckCircle2 className="h-3.5 w-3.5" />
-                                  Complete
-                                </Button>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      disabled={updating}
-                                      className="h-8 w-8 p-0"
-                                    >
-                                      <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-48">
-                                    <DropdownMenuItem
-                                      onClick={() => handleReschedule(booking)}
-                                    >
-                                      <Move className="mr-2 h-4 w-4" />
-                                      Reschedule
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => handleSendReminder(booking.id)}
-                                      disabled={sendingReminder === booking.id}
-                                    >
-                                      {sendingReminder === booking.id ? (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <Mail className="mr-2 h-4 w-4" />
-                                      )}
-                                      Send Reminder
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() => openDialog(booking, "CANCELLED")}
-                                      className="text-red-600 focus:text-red-600"
-                                    >
-                                      <XCircle className="mr-2 h-4 w-4" />
-                                      Cancel Booking
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </>
-                            )}
-                            {booking.status === "CANCELLED" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleRecreateBooking(booking)}
-                                className="gap-1.5"
-                              >
-                                <CalendarPlus className="h-3.5 w-3.5" />
-                                Recreate
-                              </Button>
-                            )}
-                            {booking.status === "COMPLETED" && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
+                                <>
                                   <Button
                                     size="sm"
-                                    variant="ghost"
-                                    className="h-8 w-8 p-0"
+                                    onClick={() => openDialog(booking, "CONFIRMED")}
+                                    disabled={updating}
+                                    className="gap-1.5"
                                   >
-                                    <MoreVertical className="h-4 w-4" />
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                    Confirm
                                   </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48">
-                                  <DropdownMenuItem
-                                    onClick={() => handleRecreateBooking(booking)}
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button size="sm" variant="outline" disabled={updating} className="h-8 w-8 p-0" aria-label="More options">
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48">
+                                      <DropdownMenuItem onClick={() => handleReschedule(booking)}>
+                                        <Move className="mr-2 h-4 w-4" />
+                                        Reschedule
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleSendReminder(booking.id)} disabled={sendingReminder === booking.id}>
+                                        {sendingReminder === booking.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                                        Send Reminder
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onClick={() => openDialog(booking, "CANCELLED")} className="text-red-600 focus:text-red-600">
+                                        <XCircle className="mr-2 h-4 w-4" />
+                                        Cancel Booking
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </>
+                              )}
+                              {booking.status === "CONFIRMED" && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openDialog(booking, "COMPLETED")}
+                                    disabled={updating}
+                                    className="gap-1.5"
                                   >
-                                    <CalendarPlus className="mr-2 h-4 w-4" />
-                                    Book Again
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </div>
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                    Complete
+                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button size="sm" variant="outline" disabled={updating} className="h-8 w-8 p-0" aria-label="More options">
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48">
+                                      <DropdownMenuItem onClick={() => handleReschedule(booking)}>
+                                        <Move className="mr-2 h-4 w-4" />
+                                        Reschedule
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleSendReminder(booking.id)} disabled={sendingReminder === booking.id}>
+                                        {sendingReminder === booking.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                                        Send Reminder
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onClick={() => openDialog(booking, "CANCELLED")} className="text-red-600 focus:text-red-600">
+                                        <XCircle className="mr-2 h-4 w-4" />
+                                        Cancel Booking
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </>
+                              )}
+                              {booking.status === "CANCELLED" && (
+                                <>
+                                  <Button size="sm" variant="outline" onClick={() => handleRecreateBooking(booking)} className="gap-1.5">
+                                    <CalendarPlus className="h-3.5 w-3.5" />
+                                    Recreate
+                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button size="sm" variant="outline" className="h-8 w-8 p-0" aria-label="More options">
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-48">
+                                      <DropdownMenuItem onClick={() => handleRecreateBooking(booking)}>
+                                        <CalendarPlus className="mr-2 h-4 w-4" />
+                                        Book Again
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </>
+                              )}
+                              {booking.status === "COMPLETED" && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button size="sm" variant="outline" className="h-8 w-8 p-0" aria-label="More options">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuItem onClick={() => handleRecreateBooking(booking)}>
+                                      <CalendarPlus className="mr-2 h-4 w-4" />
+                                      Book Again
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       );

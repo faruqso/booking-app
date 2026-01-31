@@ -10,23 +10,18 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Calendar,
-  Settings,
-  Clock,
   LogOut,
   User,
-  Sparkles,
-  SlidersHorizontal,
   Users,
   UserCog,
   MapPin,
   Repeat,
-  CreditCard,
   ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
   Scissors,
+  Settings,
   Link2,
-  Copy,
   Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -56,15 +51,12 @@ const managementNavigation: NavItem[] = [
   { name: "Recurring", href: "/dashboard/recurring-bookings", icon: Repeat },
   { name: "Customers", href: "/dashboard/customers", icon: Users },
   { name: "Locations", href: "/dashboard/locations", icon: MapPin },
-  { name: "Availability", href: "/dashboard/availability", icon: Clock },
 ];
 
-// Configuration section
+// Configuration section (Branding, Availability, Payments moved to Settings page tabs)
 const configurationNavigation: NavItem[] = [
   { name: "Staff", href: "/dashboard/staff", icon: UserCog, ownerOnly: true },
-  { name: "Branding", href: "/dashboard/branding", icon: Sparkles },
-  { name: "Payments", href: "/dashboard/payments", icon: CreditCard, ownerOnly: true },
-  { name: "Settings", href: "/dashboard/settings", icon: SlidersHorizontal },
+  { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 export function DashboardSidebar() {
@@ -157,24 +149,29 @@ export function DashboardSidebar() {
     const Icon = item.icon;
     
     return (
-      <div key={item.name} title={collapsed ? item.name : undefined} className="w-full">
+      <div
+        key={item.name}
+        title={collapsed ? item.name : undefined}
+        className={cn("w-full", collapsed && "flex justify-center")}
+      >
         <Link
           href={item.href}
           prefetch={true}
           className={cn(
-            "flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all duration-300 ease-in-out min-w-0",
-            collapsed ? "px-3 justify-center w-full" : "px-3 w-full",
-            isNested && !collapsed && "ml-2",
+            "flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all duration-300 ease-in-out",
+            collapsed
+              ? "h-10 w-10 shrink-0 justify-center items-center p-0"
+              : "px-4",
             isActive
               ? "bg-primary text-primary-foreground shadow-sm"
               : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
           )}
         >
-          <Icon className={cn("h-5 w-5 flex-shrink-0 transition-all duration-300", collapsed && "mx-auto")} />
+          <Icon className="h-5 w-5 flex-shrink-0" />
           <span
             className={cn(
-              "truncate min-w-0 transition-all duration-300 ease-in-out",
-              collapsed ? "opacity-0 max-w-0 overflow-hidden w-0" : "flex-1"
+              "truncate transition-all duration-300 ease-in-out",
+              collapsed ? "sr-only" : "flex-1"
             )}
           >
             {item.name}
@@ -207,7 +204,7 @@ export function DashboardSidebar() {
         <button
           onClick={onToggle}
           className={cn(
-            "flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-300 ease-in-out overflow-hidden max-h-8",
+            "flex w-full items-center justify-between rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-300 ease-in-out overflow-hidden max-h-8",
             "text-muted-foreground hover:text-foreground",
             collapsed && "max-h-0 opacity-0 py-0 px-0 border-0 pointer-events-none my-0"
           )}
@@ -234,17 +231,17 @@ export function DashboardSidebar() {
         "group flex h-screen flex-col border-r bg-background overflow-hidden transition-[width] duration-300 ease-in-out flex-shrink-0",
         collapsed ? "w-16 min-w-[4rem]" : "w-64 min-w-[16rem]"
       )}>
-        {/* Logo/Brand - single DOM, crossfade */}
+        {/* Logo/Brand - symmetric px-4 so content never crops */}
         <div className="flex h-16 flex-shrink-0 items-center border-b px-4 min-w-0">
-          <div className="relative flex flex-1 items-center min-w-0 min-w-8 h-8">
+          <div className="relative flex flex-1 items-center min-w-0 h-8">
             {/* Expanded: logo + text + collapse btn */}
             <div
               className={cn(
-                "flex items-center justify-between w-full min-w-0 transition-opacity duration-300 ease-in-out",
+                "flex items-center justify-between gap-2 w-full min-w-0 transition-opacity duration-300 ease-in-out",
                 collapsed && "absolute inset-0 opacity-0 pointer-events-none"
               )}
             >
-              <Link href="/dashboard" className="flex items-center space-x-2 min-w-0">
+              <Link href="/dashboard" className="flex flex-1 min-w-0 items-center gap-2">
                 <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <Calendar className="h-5 w-5" />
                 </div>
@@ -253,7 +250,7 @@ export function DashboardSidebar() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 flex-shrink-0"
+                className="h-8 w-8 flex-shrink-0 shrink-0"
                 onClick={() => setCollapsed(true)}
               >
                 <PanelLeftClose className="h-4 w-4" />
@@ -279,9 +276,12 @@ export function DashboardSidebar() {
           </div>
         </div>
 
-        {/* Quick Action: Copy Booking Link - single DOM */}
+        {/* Quick Action: Copy Booking Link - symmetric px-4 */}
         {businessId && (
-          <div className="border-b px-3 py-3 overflow-hidden">
+          <div className={cn(
+            "border-b overflow-hidden min-w-0",
+            collapsed ? "flex justify-center py-3 px-0" : "px-4 py-3"
+          )}>
             <Button
               variant="outline"
               size="sm"
@@ -289,8 +289,8 @@ export function DashboardSidebar() {
               title={collapsed ? "Copy booking link" : undefined}
               aria-label="Copy booking link"
               className={cn(
-                "w-full h-9 gap-2 text-xs font-medium transition-all duration-300 ease-in-out overflow-hidden",
-                collapsed && "justify-center"
+                "w-full min-w-0 h-9 gap-2 text-xs font-medium transition-all duration-300 ease-in-out overflow-hidden",
+                collapsed && "h-10 w-10 min-w-10 shrink-0 justify-center items-center p-0 rounded-none"
               )}
             >
               {copied ? (
@@ -300,7 +300,7 @@ export function DashboardSidebar() {
               )}
               <span
                 className={cn(
-                  "truncate whitespace-nowrap transition-all duration-300 ease-in-out",
+                  "truncate min-w-0 whitespace-nowrap transition-all duration-300 ease-in-out",
                   copied && "text-green-600",
                   collapsed && "opacity-0 max-w-0 overflow-hidden w-0"
                 )}
@@ -311,8 +311,8 @@ export function DashboardSidebar() {
           </div>
         )}
 
-        {/* Navigation - single DOM, sections always rendered */}
-        <nav className="flex-1 space-y-4 overflow-y-auto overflow-x-hidden pl-3 pr-5 py-4">
+        {/* Navigation */}
+        <nav className="flex-1 space-y-4 overflow-y-auto overflow-x-hidden py-4 px-3">
           <div className="space-y-1">
             {coreNavigation.map((item) => renderNavItem(item))}
           </div>
@@ -334,20 +334,23 @@ export function DashboardSidebar() {
           )}
         </nav>
 
-        {/* User Section - single DOM */}
-        <div className="border-t p-4 overflow-hidden flex-shrink-0">
+        {/* User Section - symmetric p-4 */}
+        <div className={cn(
+          "border-t overflow-hidden flex-shrink-0 min-w-0",
+          collapsed ? "flex justify-center p-3" : "p-4"
+        )}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 title={collapsed ? (session?.user?.name || "User") : undefined}
                 className={cn(
-                  "w-full gap-3 transition-all duration-300 ease-in-out overflow-hidden",
-                  collapsed ? "justify-center px-0" : "justify-start px-3"
+                  "w-full min-w-0 gap-3 transition-all duration-300 ease-in-out overflow-hidden",
+                  collapsed ? "h-10 w-10 min-w-10 shrink-0 justify-center items-center p-0 rounded-none" : "justify-start px-3"
                 )}
               >
-                <Avatar className="h-8 w-8 flex-shrink-0">
-                  <AvatarFallback>
+                <Avatar className={cn("h-8 w-8 flex-shrink-0", collapsed && "rounded-none")}>
+                  <AvatarFallback className={collapsed ? "rounded-none" : undefined}>
                     {session?.user?.email?.charAt(0).toUpperCase() || "U"}
                   </AvatarFallback>
                 </Avatar>

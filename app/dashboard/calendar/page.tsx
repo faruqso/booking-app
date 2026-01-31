@@ -622,9 +622,7 @@ export default function CalendarPage() {
                 <ul className="space-y-1.5 text-gray-700 list-disc list-inside">
                   <li><strong>Click</strong> any booking to view details and manage it</li>
                   <li><strong>Click</strong> an empty date cell to see all bookings for that day</li>
-                  <li><strong>Drag</strong> bookings by clicking and dragging the event to reschedule</li>
-                  <li><strong>Click</strong> any booking to view and manage details</li>
-                  <li><strong>Filter</strong> by status using the filter buttons below</li>
+                  <li><strong>Filter</strong> by status using the cards above (Total, Confirmed, Pending, etc.)</li>
                 </ul>
               </div>
             </div>
@@ -723,31 +721,51 @@ export default function CalendarPage() {
         </Card>
       </div>
 
-      <Card className="border border-gray-200 shadow-sm">
+      <Card className={cn(
+        "border shadow-sm transition-colors",
+        statusFilter === "CONFIRMED" && "border-l-4 border-l-green-500 border-gray-200 bg-green-50/20",
+        statusFilter === "PENDING" && "border-l-4 border-l-amber-500 border-gray-200 bg-amber-50/20",
+        statusFilter === "CANCELLED" && "border-l-4 border-l-red-500 border-gray-200 bg-red-50/20",
+        statusFilter === "COMPLETED" && "border-l-4 border-l-gray-500 border-gray-200 bg-gray-50/50",
+        !statusFilter && "border-gray-200"
+      )}>
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2.5">
               <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-50">
                 <CalendarIcon className="h-5 w-5 text-[#1877F2]" />
               </div>
               <div>
-                <CardTitle className="text-xl font-bold text-gray-900">Booking Calendar</CardTitle>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <CardTitle className="text-xl font-bold text-gray-900">Booking Calendar</CardTitle>
+                  {statusFilter && (
+                    <span className={cn(
+                      "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-0.5 text-xs font-medium",
+                      statusFilter === "CONFIRMED" && "border-green-200 bg-green-100 text-green-800",
+                      statusFilter === "PENDING" && "border-amber-200 bg-amber-100 text-amber-800",
+                      statusFilter === "CANCELLED" && "border-red-200 bg-red-100 text-red-800",
+                      statusFilter === "COMPLETED" && "border-gray-200 bg-gray-100 text-gray-700"
+                    )}>
+                      Filter: {statusFilter.charAt(0) + statusFilter.slice(1).toLowerCase()}
+                    </span>
+                  )}
+                </div>
                 <CardDescription className="text-sm text-gray-600 mt-0.5">
                   {statusFilter 
-                    ? `Showing ${statusFilter.toLowerCase()} bookings only` 
-                    : "Click bookings to view details • Drag to reschedule"}
+                    ? `Showing ${statusFilter.toLowerCase()} bookings only — click a stat card above or clear to see all` 
+                    : "Click bookings to view details"}
                 </CardDescription>
               </div>
             </div>
             {statusFilter && (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => setStatusFilter(null)}
-                className="gap-2"
+                className="gap-2 shrink-0"
               >
                 <XCircle className="h-4 w-4" />
-                Clear Filter
+                Clear filter
               </Button>
             )}
           </div>
