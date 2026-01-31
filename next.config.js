@@ -80,8 +80,8 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' http://127.0.0.1:7243 http://localhost:7243 https://api.paystack.co https://api.stripe.com https://api.flutterwave.com https://*.paystack.co",
-              "frame-src 'self' https://js.paystack.co https://checkout.stripe.com https://*.paystack.co",
+              "connect-src 'self' https://api.paystack.co https://api.stripe.com https://api.flutterwave.com https://*.paystack.co",
+              "frame-src 'self' https://vercel.live https://js.paystack.co https://checkout.stripe.com https://*.paystack.co",
               "frame-ancestors 'self'",
             ].join('; ')
           }
