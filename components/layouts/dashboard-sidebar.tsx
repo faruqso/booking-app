@@ -23,6 +23,7 @@ import {
   Settings,
   Link2,
   Check,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +42,7 @@ type NavItem = { name: string; href: string; icon: ComponentType<{ className?: s
 // Core navigation items (always visible)
 const coreNavigation: NavItem[] = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { name: "Services", href: "/dashboard/services", icon: Scissors },
   { name: "Bookings", href: "/dashboard/bookings", icon: Calendar },
   { name: "Calendar", href: "/dashboard/calendar", icon: Calendar },
