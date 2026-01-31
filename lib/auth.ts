@@ -146,17 +146,7 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production' || !!process.env.VERCEL,
-      },
-    },
-  },
+  // Let NextAuth use default cookie names - custom names can cause middleware to miss the session (auth sets X, middleware looks for __Secure-X)
   callbacks: {
     async jwt({ token, user, account }) {
       if (account?.error) {

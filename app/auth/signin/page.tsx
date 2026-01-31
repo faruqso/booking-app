@@ -60,7 +60,19 @@ function SignInContent() {
       const normalizedEmail = formData.email.trim().toLowerCase();
       const trimmedPassword = formData.password.trim();
 
-      const callbackUrlParam = callbackUrl || "/dashboard";
+      // Use pathname only so redirect stays on same origin (avoids NEXTAUTH_URL vs request host mismatch)
+      let callbackUrlParam = callbackUrl || "/dashboard";
+      try {
+        if (callbackUrlParam.startsWith("http")) {
+          const u = new URL(callbackUrlParam, window.location.origin);
+          callbackUrlParam = u.pathname + u.search;
+        }
+        if (callbackUrlParam.includes("/auth/signin") || callbackUrlParam.includes("/auth/signup")) {
+          callbackUrlParam = "/dashboard";
+        }
+      } catch {
+        callbackUrlParam = "/dashboard";
+      }
       const result = await Promise.race([
         signIn("credentials", {
           email: normalizedEmail,
