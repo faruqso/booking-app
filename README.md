@@ -2,9 +2,43 @@
 
 A self-serve, white-label booking platform for businesses.
 
-## Phase 1: MVP
+## Current Status: Phase 3 Complete ✅
 
-This is the initial MVP focusing on single business booking with basic branding.
+### Phase 1: MVP ✅
+- Authentication (sign-in, sign-up, password reset)
+- Business onboarding wizard
+- Services management (CRUD with pricing, duration, categories)
+- Customer-facing booking page (`/book/[businessId]`)
+- Booking management (confirm, cancel, reschedule)
+- Basic branding (logo, primary color, business name)
+
+### Phase 2: Growth Features ✅
+- Multi-location support with per-location availability
+- Customer relationship management (CRM)
+- Recurring bookings (daily, weekly, biweekly, monthly)
+- Payment integration (Stripe, Paystack, Flutterwave)
+- Enhanced branding (colors, fonts, favicon)
+- Booking rules (advance booking, cancellation policy, buffers)
+- Staff management with role-based access
+- SMS notifications (Twilio)
+- WhatsApp notifications (Cloud API)
+- Localization (timezone, date/time formats, currencies)
+- Full calendar view
+
+### Phase 3: Refinement & Stability ✅
+- Unified Settings page with consolidated tabs
+- Sidebar UI/UX improvements
+- Authentication stability across all environments
+- AI-powered features (autocomplete, suggestions)
+- Build & deployment automation
+
+### Phase 4: Analytics & Integrations 🚧 (In Progress)
+See [PHASE_4_ROADMAP.md](./PHASE_4_ROADMAP.md) for details:
+- Analytics dashboard (revenue, bookings, customers)
+- Customer self-service portal
+- Google Calendar / Outlook integration
+- Enhanced notification templates
+- Waitlist and group bookings
 
 ## Setup
 

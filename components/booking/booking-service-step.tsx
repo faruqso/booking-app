@@ -47,15 +47,6 @@ export function BookingServiceStep({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            {service.imageUrl && (
-              <div className="mb-3 rounded-lg overflow-hidden">
-                <img
-                  src={service.imageUrl}
-                  alt={service.name}
-                  className="w-full h-32 object-cover"
-                />
-              </div>
-            )}
             <div className="flex justify-between items-start mb-2">
               <div className="flex-1">
                 <h3 className="font-semibold text-lg">{service.name}</h3>
