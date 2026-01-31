@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import type { ComponentType } from "react";
 import { useState, useEffect, useMemo } from "react";
@@ -69,6 +69,7 @@ const configurationNavigation: NavItem[] = [
 
 export function DashboardSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = useSession();
   const { toast } = useToast();
   const [collapsed, setCollapsed] = useState(false);
@@ -138,19 +139,31 @@ export function DashboardSidebar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]); // Only depend on pathname to avoid unnecessary re-renders
 
+  // Prefetch dashboard routes so tab clicks feel instant
+  useEffect(() => {
+    const hrefs = [
+      ...coreNavigation.map((i) => i.href),
+      ...managementNavigation.map((i) => i.href),
+      ...configurationNavigation
+        .filter((i) => !i.ownerOnly || session?.user?.role === "BUSINESS_OWNER")
+        .map((i) => i.href),
+    ];
+    hrefs.forEach((href) => router.prefetch(href));
+  }, [router, session?.user?.role]);
+
   const renderNavItem = (item: typeof coreNavigation[0], isNested = false) => {
     const isActive = pathname === item.href || 
       (item.href !== "/dashboard" && pathname?.startsWith(item.href));
     const Icon = item.icon;
     
     return (
-      <div key={item.name} title={collapsed ? item.name : undefined} className="inline-block w-full">
+      <div key={item.name} title={collapsed ? item.name : undefined} className="w-full">
         <Link
           href={item.href}
           prefetch={true}
           className={cn(
             "flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-all duration-300 ease-in-out",
-            collapsed ? "px-3 justify-center w-full" : "px-3 w-full",
+            collapsed ? "px-3 justify-center w-full" : "px-3 w-full max-w-[calc(100%-0.5rem)]",
             isNested && !collapsed && "ml-2",
             isActive
               ? "bg-primary text-primary-foreground shadow-sm"
@@ -299,7 +312,7 @@ export function DashboardSidebar() {
         )}
 
         {/* Navigation - single DOM, sections always rendered */}
-        <nav className="flex-1 space-y-4 overflow-y-auto overflow-x-hidden px-3 py-4">
+        <nav className="flex-1 space-y-4 overflow-y-auto overflow-x-hidden pl-3 pr-5 py-4">
           <div className="space-y-1">
             {coreNavigation.map((item) => renderNavItem(item))}
           </div>

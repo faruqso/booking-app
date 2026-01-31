@@ -180,12 +180,24 @@ export const authOptions: NextAuthOptions = {
       }
       return true;
     },
+    async redirect({ url, baseUrl }) {
+      // Send auth errors to sign-in page instead of /api/auth/error
+      if (url.startsWith("/api/auth/error")) {
+        return `${baseUrl}/auth/signin?error=ServerError`;
+      }
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
+    },
   },
   pages: {
     signIn: "/auth/signin",
     error: "/auth/signin", // Redirect errors back to signin page
   },
-  secret: process.env.NEXTAUTH_SECRET || (process.env.VERCEL ? "fallback-secret-change-in-production" : undefined),
+  secret:
+    process.env.NEXTAUTH_SECRET ||
+    (process.env.NODE_ENV === "development" ? "dev-secret-min-32-chars-for-nextauth-jwt" : undefined) ||
+    (process.env.VERCEL ? "fallback-secret-change-in-production" : undefined),
   debug: process.env.NODE_ENV === "development" || !!process.env.VERCEL, // Enable debug in development and Vercel
 };
 

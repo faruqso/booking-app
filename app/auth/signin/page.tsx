@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,18 +16,30 @@ import { useToast } from "@/hooks/use-toast";
 
 function SignInContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+  const hasShownErrorRef = useRef(false);
 
   useEffect(() => {
     if (searchParams?.get("registered") === "true") {
       toast({
         title: "Account created",
         description: "Please sign in to continue",
+      });
+    }
+    // Only show config error toast once, and only if they came from a failed attempt (error in URL)
+    const errorParam = searchParams?.get("error");
+    if ((errorParam === "ServerError" || errorParam === "Configuration") && !hasShownErrorRef.current) {
+      hasShownErrorRef.current = true;
+      toast({
+        title: "Sign-in issue",
+        description: "Something went wrong on our side. Please try again. If it persists, check that NEXTAUTH_SECRET and NEXTAUTH_URL are set.",
+        variant: "destructive",
       });
     }
   }, [searchParams, toast]);
@@ -38,6 +50,9 @@ function SignInContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/dac94886-3075-4737-bdca-5cc6718aa40e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1',location:'app/auth/signin/page.tsx:handleSubmit',message:'sign-in submit',data:{hasCallbackUrl:!!callbackUrl,hasEmail:!!formData.email,hasPassword:!!formData.password},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     const timeoutMs = 25000; // 25s – avoid stuck "Signing in..." (e.g. cold DB)
     const timeoutPromise = new Promise<null>((_, reject) =>
@@ -57,8 +72,14 @@ function SignInContent() {
         }),
         timeoutPromise,
       ]);
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/dac94886-3075-4737-bdca-5cc6718aa40e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1',location:'app/auth/signin/page.tsx:afterSignIn',message:'sign-in result',data:{hasError:!!result?.error,ok:result?.ok,status:result?.status,hasUrl:!!result?.url},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
 
       if (result?.error) {
+        // #region agent log
+        fetch('http://127.0.0.1:7243/ingest/dac94886-3075-4737-bdca-5cc6718aa40e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H2',location:'app/auth/signin/page.tsx:resultError',message:'sign-in error branch',data:{error:result.error},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         let errorMessage = "Unable to sign in. Please try again.";
         let errorDetails = "";
         
@@ -81,9 +102,9 @@ function SignInContent() {
         } else if (result.error.includes("DATABASE_CONNECTION_ERROR") || result.error.includes("DATABASE_ERROR")) {
           errorMessage = "Database connection error.";
           errorDetails = "We couldn't reach the database. If you use Neon: your project may be paused—open console.neon.tech, open your project to wake it, wait a few seconds, then try signing in again. You can also try clicking Sign in again in case the database was waking up.";
-        } else if (result.error.includes("Configuration")) {
+        } else if (result.error.includes("Configuration") || result.error.includes("ServerError")) {
           errorMessage = "Server configuration error.";
-          errorDetails = "There's an issue with the server configuration. Please contact support if this persists.";
+          errorDetails = "Something went wrong on our side. Please try again. If it persists, check that NEXTAUTH_SECRET and NEXTAUTH_URL are set.";
         } else if (result.error.includes("AccessDenied")) {
           errorMessage = "Access denied.";
           errorDetails = "Your account may be suspended or inactive. Please contact support.";
@@ -100,24 +121,29 @@ function SignInContent() {
           duration: 5000,
         });
         setLoading(false);
-      } else if (result?.url) {
-        // NextAuth returned a redirect URL (e.g. after success with redirect: true)
-        window.location.href = result.url;
       } else {
-        // Full page redirect so the session cookie is sent on the next request (avoids middleware sending user back to sign-in)
+        // Sign-in succeeded - redirect to dashboard (or callbackUrl if set)
         let path = callbackUrl || "/dashboard";
         try {
           if (path.startsWith("http")) {
-            const u = new URL(path);
+            const u = new URL(path, window.location.origin);
             path = u.pathname + u.search;
+          }
+          // Avoid redirect loops - if path is signin, go to dashboard instead
+          if (path.includes("/auth/signin") || path.includes("/auth/signup")) {
+            path = "/dashboard";
           }
         } catch {
           path = "/dashboard";
         }
+        // Full page load so the session cookie is sent with the request
         window.location.href = path;
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Please try again. If the problem persists, contact support.";
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/dac94886-3075-4737-bdca-5cc6718aa40e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H2',location:'app/auth/signin/page.tsx:catch',message:'sign-in exception',data:{message},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       toast({
         title: "Sign-in issue",
         description: message,
