@@ -413,16 +413,20 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
+  let session;
   try {
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
+  } catch (authError) {
+    console.error("Bookings GET: getServerSession error", authError);
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-    if (!session?.user?.businessId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+  if (!session?.user?.businessId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
+  const businessId = session.user.businessId;
+  try {
     const { searchParams } = new URL(request.url);
     const statusParam = searchParams.get("status");
     const dateParam = searchParams.get("date");
@@ -432,7 +436,7 @@ export async function GET(request: Request) {
       statusParam && validStatuses.includes(statusParam as BookingStatus) ? (statusParam as BookingStatus) : undefined;
 
     const where: Prisma.BookingWhereInput = {
-      businessId: session.user.businessId,
+      businessId,
       ...(statusFilter ? { status: statusFilter } : {}),
       ...(dateParam
         ? (() => {
@@ -481,19 +485,17 @@ export async function GET(request: Request) {
           },
         },
       },
-      orderBy: {
-        startTime: "desc", // Most recent first
-      },
-      take: 100, // Limit to 100 bookings to improve performance
+      orderBy: { startTime: "desc" },
+      take: 100,
     });
 
     return NextResponse.json(bookings);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Bookings fetch error:", message);
-    return NextResponse.json(
-      { error: "Failed to fetch bookings" },
-      { status: 500 }
-    );
+    console.error("Bookings GET: prisma/error", message);
+    // Return 200 with empty array + error flag so client can render and show toast (avoids 500 → error boundary loop)
+    return NextResponse.json([], {
+      headers: { "X-Bookings-Error": "true" },
+    });
   }
 }
