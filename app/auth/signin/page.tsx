@@ -49,9 +49,6 @@ function SignInContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/dac94886-3075-4737-bdca-5cc6718aa40e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1',location:'app/auth/signin/page.tsx:handleSubmit',message:'sign-in submit',data:{hasCallbackUrl:!!callbackUrl,hasEmail:!!formData.email,hasPassword:!!formData.password},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
     const timeoutMs = 25000; // 25s – avoid stuck "Signing in..." (e.g. cold DB)
     const timeoutPromise = new Promise<null>((_, reject) =>
@@ -74,14 +71,8 @@ function SignInContent() {
         timeoutPromise,
       ]);
       // signIn with redirect: true doesn't return on success; if we get here, it failed or timed out
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/dac94886-3075-4737-bdca-5cc6718aa40e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1',location:'app/auth/signin/page.tsx:afterSignIn',message:'sign-in result',data:{hasError:!!result?.error,ok:result?.ok,status:result?.status,hasUrl:!!result?.url},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
 
       if (result?.error) {
-        // #region agent log
-        fetch('http://127.0.0.1:7243/ingest/dac94886-3075-4737-bdca-5cc6718aa40e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H2',location:'app/auth/signin/page.tsx:resultError',message:'sign-in error branch',data:{error:result.error},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         let errorMessage = "Unable to sign in. Please try again.";
         let errorDetails = "";
         
@@ -142,9 +133,6 @@ function SignInContent() {
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Please try again. If the problem persists, contact support.";
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/dac94886-3075-4737-bdca-5cc6718aa40e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H2',location:'app/auth/signin/page.tsx:catch',message:'sign-in exception',data:{message},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       toast({
         title: "Sign-in issue",
         description: message,

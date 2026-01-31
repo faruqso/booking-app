@@ -70,7 +70,7 @@ export default function DashboardPage() {
     }
   }, [businessId]);
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (retries = 2) => {
     try {
       const response = await fetch("/api/bookings");
       if (response.ok) {
@@ -97,6 +97,10 @@ export default function DashboardPage() {
         });
       }
     } catch (error) {
+      if (retries > 0) {
+        await new Promise((r) => setTimeout(r, 1500));
+        return fetchBookings(retries - 1);
+      }
       console.error("Failed to fetch bookings:", error);
       toast({
         title: "Error",
@@ -274,9 +278,9 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-stretch">
-              <div className="flex-1 flex min-w-0 h-10 bg-background border rounded-lg w-full sm:max-w-xl overflow-hidden">
-                <code className="flex-1 text-sm font-mono text-muted-foreground truncate min-w-0 py-2.5 pl-3 pr-2 flex items-center">
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-stretch w-full">
+              <div className="flex-1 flex min-w-0 h-10 bg-background border rounded-lg overflow-hidden">
+                <code className="flex-1 text-sm font-mono text-muted-foreground min-w-0 py-2.5 pl-3 pr-2 flex items-center overflow-x-auto">
                   {bookingPageUrl}
                 </code>
                 <Button
